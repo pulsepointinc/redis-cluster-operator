@@ -1,4 +1,4 @@
-FROM golang:1.13.3-alpine as go-builder
+FROM golang:1.23-alpine as go-builder
 
 RUN apk update && apk upgrade && \
     apk add --no-cache ca-certificates git mercurial
@@ -23,7 +23,7 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ${GOBIN}/${PROJECT_NAME} \
     $BUILD_PATH
 
 # =============================================================================
-FROM alpine:3.9 AS final
+FROM alpine:3.21 AS final
 
 ARG PROJECT_NAME=redis-cluster-operator
 
