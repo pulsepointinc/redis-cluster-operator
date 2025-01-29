@@ -26,6 +26,9 @@ spec:
           args:
           - --rename-command-path=/etc/redisconf
           - --rename-command-file=redis.conf
+          {{- range .Values.args }}
+          - {{ . }}
+          {{- end }}
           imagePullPolicy: {{ .Values.operator.imagePullPolicy }}
           resources:
             {{- .Values.operator.resources | toYaml | nindent 12 }}

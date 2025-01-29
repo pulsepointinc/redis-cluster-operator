@@ -198,7 +198,7 @@ func (r *ReconcileDistributedRedisCluster) syncCluster(ctx *syncContext) error {
 	}
 	clusterCtx := clustering.NewCtx(rCluster, nodes, cluster.Spec.MasterSize, cluster.Name, ctx.reqLogger)
 	if err := clusterCtx.DispatchMasters(); err != nil {
-		return Cluster.Wrap(err, "DispatchMasters")
+		return Cluster.Wrapf(err, "DispatchMasters with nodes %#v", nodes)
 	}
 	curMasters := clusterCtx.GetCurrentMasters()
 	newMasters := clusterCtx.GetNewMasters()
