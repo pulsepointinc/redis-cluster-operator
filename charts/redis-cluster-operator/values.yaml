@@ -7,6 +7,7 @@ operator:
   image_source: "fishu/redis-cluster-operator"
   image_tag: "latest"
   imagePullPolicy: "Always"
+  args: []
   resources:
     limits:
       cpu: 200m
