@@ -25,7 +25,7 @@ func getLabels(cluster *redisv1alpha1.DistributedRedisCluster) map[string]string
 	dynLabels := map[string]string{
 		redisv1alpha1.LabelClusterName: cluster.Name,
 	}
-	return utils.MergeLabels(defaultLabels, dynLabels, cluster.Labels)
+	return utils.MergeLabels(defaultLabels, dynLabels)
 }
 
 // newRedisAdmin builds and returns new redis.Admin from the list of pods
