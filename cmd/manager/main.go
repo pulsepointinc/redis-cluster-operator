@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackupschedule"
 	"os"
 	"runtime"
 
@@ -58,6 +59,7 @@ func main() {
 
 	pflag.CommandLine.AddFlagSet(distributedrediscluster.FlagSet())
 	pflag.CommandLine.AddFlagSet(redisclusterbackup.FlagSet())
+	pflag.CommandLine.AddFlagSet(redisclusterbackupschedule.FlagSet())
 
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)

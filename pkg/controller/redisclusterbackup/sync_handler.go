@@ -221,7 +221,7 @@ func (r *ReconcileRedisClusterBackup) getBackupJob(reqLogger logr.Logger, backup
 		return nil, err
 	}
 
-	containers, err := r.backupContainers(backup, cluster, reqLogger)
+	containers, initContainers, err := r.backupContainers(backup, cluster, reqLogger)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,8 @@ func (r *ReconcileRedisClusterBackup) getBackupJob(reqLogger logr.Logger, backup
 			ActiveDeadlineSeconds: backup.Spec.ActiveDeadlineSeconds,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					Containers: containers,
+					InitContainers: initContainers,
+					Containers:     containers,
 					Volumes: []corev1.Volume{
 						{
 							Name:         persistentVolume.Name,
@@ -292,12 +293,68 @@ func (r *ReconcileRedisClusterBackup) getBackupJob(reqLogger logr.Logger, backup
 	return job, nil
 }
 
-func (r *ReconcileRedisClusterBackup) backupContainers(backup *redisv1alpha1.RedisClusterBackup, cluster *redisv1alpha1.DistributedRedisCluster, reqLogger logr.Logger) ([]corev1.Container, error) {
+func (r *ReconcileRedisClusterBackup) backupContainers(backup *redisv1alpha1.RedisClusterBackup, cluster *redisv1alpha1.DistributedRedisCluster, reqLogger logr.Logger) ([]corev1.Container, []corev1.Container, error) {
 	backupSpec := backup.Spec.Backend
 	location, err := backupSpec.Location()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	// Create init containers for cleanup if retention policy is set
+	var initContainers []corev1.Container
+
+	// Check if this backup is created by a schedule with retention policy
+	var schedule *redisv1alpha1.RedisClusterBackupSchedule
+	for _, ownerRef := range backup.OwnerReferences {
+		if ownerRef.Kind == "RedisClusterBackupSchedule" {
+			// Find the schedule
+			scheduleTmp := &redisv1alpha1.RedisClusterBackupSchedule{}
+			err := r.client.Get(context.TODO(), types.NamespacedName{
+				Namespace: backup.Namespace,
+				Name:      ownerRef.Name,
+			}, scheduleTmp)
+			if err == nil && scheduleTmp.Spec.RetentionPolicy != nil {
+				schedule = scheduleTmp
+				break
+			}
+		}
+	}
+
+	// Add cleanup init container if schedule with retention policy exists
+	if schedule != nil && schedule.Spec.RetentionPolicy != nil {
+		policy := schedule.Spec.RetentionPolicy
+		if policy.MaxCount != nil || policy.MaxAge != nil {
+			reqLogger.Info("Adding cleanup init container with retention policy",
+				"MaxCount", policy.MaxCount,
+				"MaxAge", policy.MaxAge)
+
+			// Generate cleanup script
+			cleanupScript := generateCleanupScript(policy)
+
+			initContainers = append(initContainers, corev1.Container{
+				Name:            "backup-cleanup",
+				Image:           "busybox:latest",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command: []string{
+					"sh",
+					"-c",
+					cleanupScript,
+				},
+				VolumeMounts: []corev1.VolumeMount{},
+			})
+
+			// Mount the local volume to the cleanup container
+			if backup.Spec.Backend.Local != nil {
+				// For local backups, mount the local PVC
+				initContainers[0].VolumeMounts = append(initContainers[0].VolumeMounts, corev1.VolumeMount{
+					Name:      "local",
+					MountPath: "/data", // Mount at /data since that's the base path in our script
+					SubPath:   backup.Spec.Backend.Local.SubPath,
+				})
+			}
+		}
+	}
+
 	masterNum := int(cluster.Spec.MasterSize)
 	containers := make([]corev1.Container, masterNum)
 	i := 0
@@ -314,7 +371,7 @@ func (r *ReconcileRedisClusterBackup) backupContainers(backup *redisv1alpha1.Red
 					event.BackupError,
 					err.Error(),
 				)
-				return nil, err
+				return nil, nil, err
 			}
 			reqLogger.V(3).Info("backup", "folderName", folderName)
 			container := corev1.Container{
@@ -362,7 +419,7 @@ func (r *ReconcileRedisClusterBackup) backupContainers(backup *redisv1alpha1.Red
 			i++
 		}
 	}
-	return containers, nil
+	return containers, initContainers, nil
 }
 
 // GetVolumeForBackup returns pvc or empty directory depending on StorageType.
@@ -392,6 +449,78 @@ func (r *ReconcileRedisClusterBackup) GetVolumeForBackup(backup *redisv1alpha1.R
 	}
 
 	return volume, nil
+}
+
+// generateCleanupScript creates a shell script to clean up old backups
+func generateCleanupScript(policy *redisv1alpha1.BackupRetentionPolicy) string {
+	script := `
+echo "Starting pre-backup cleanup process..."
+cd /data || { echo "Data directory not found"; exit 1; }
+
+# Path structure is: redis/[namespace]/[redisClusterName]/[timestamp]
+if [ ! -d "redis" ]; then
+    echo "Redis directory not found, nothing to clean up"
+    exit 0
+fi
+
+cd redis || { echo "Cannot access redis directory"; exit 1; }
+for NAMESPACE in */; do
+    echo "Processing namespace: $NAMESPACE"
+    cd "$NAMESPACE" || continue
+    for CLUSTER_DIR in */; do
+        echo "Processing cluster directory: $CLUSTER_DIR"
+        cd "$CLUSTER_DIR" || continue
+        # Find backup folders in YYYYMMDDHHmmss format (e.g., 20250326090000)
+        BACKUP_DIRS=$(find . -maxdepth 1 -type d -name "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]" | sort)
+        
+        if [ -z "$BACKUP_DIRS" ]; then
+            echo "No backup directories found in $CLUSTER_DIR"
+            cd ..
+            continue
+        fi
+        
+        echo "Found the following backup directories in $CLUSTER_DIR:"
+        echo "$BACKUP_DIRS"
+
+        TOTAL_BACKUPS=$(echo "$BACKUP_DIRS" | wc -l)
+        echo "Total backup folders found: $TOTAL_BACKUPS"
+`
+
+	// If MaxCount is set, add script to keep only the newest N backups
+	if policy.MaxCount != nil {
+		maxCount := *policy.MaxCount
+		script += fmt.Sprintf(`
+        # Keep only the newest %d backups
+        if [ "$TOTAL_BACKUPS" -gt %d ]; then
+            echo "Removing old backups to keep only %d most recent..."
+            TO_DELETE=$((TOTAL_BACKUPS - %d))
+            echo "Will delete $TO_DELETE oldest backups"
+            
+            # Get the oldest backups to delete (sort by name, which is timestamp)
+            DIRS_TO_DELETE=$(echo "$BACKUP_DIRS" | head -n $TO_DELETE)
+            
+            for DIR in $DIRS_TO_DELETE; do
+                echo "Deleting old backup: $DIR"
+                rm -rf "$DIR"
+            done
+        else
+            echo "No need to clean up based on count, have $TOTAL_BACKUPS backups with limit %d"
+        fi
+`, maxCount, maxCount, maxCount, maxCount, maxCount)
+	}
+	script += `
+        # Return to namespace directory
+        cd ..
+    done
+    
+    # Return to redis base directory
+    cd ..
+done
+
+echo "Backup cleanup completed."
+`
+
+	return script
 }
 
 func (r *ReconcileRedisClusterBackup) createPVCForBackup(backup *redisv1alpha1.RedisClusterBackup, jobName string) error {

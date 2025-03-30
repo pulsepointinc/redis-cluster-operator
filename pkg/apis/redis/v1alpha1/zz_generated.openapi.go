@@ -11,12 +11,15 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisCluster":       schema_pkg_apis_redis_v1alpha1_DistributedRedisCluster(ref),
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec":   schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref),
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus": schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterStatus(ref),
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackup":            schema_pkg_apis_redis_v1alpha1_RedisClusterBackup(ref),
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupSpec":        schema_pkg_apis_redis_v1alpha1_RedisClusterBackupSpec(ref),
-		"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupStatus":      schema_pkg_apis_redis_v1alpha1_RedisClusterBackupStatus(ref),
+		"./pkg/apis/redis/v1alpha1.DistributedRedisCluster":          schema_pkg_apis_redis_v1alpha1_DistributedRedisCluster(ref),
+		"./pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec":      schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref),
+		"./pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus":    schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterStatus(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackup":               schema_pkg_apis_redis_v1alpha1_RedisClusterBackup(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackupSchedule":       schema_pkg_apis_redis_v1alpha1_RedisClusterBackupSchedule(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleSpec":   schema_pkg_apis_redis_v1alpha1_RedisClusterBackupScheduleSpec(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleStatus": schema_pkg_apis_redis_v1alpha1_RedisClusterBackupScheduleStatus(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackupSpec":           schema_pkg_apis_redis_v1alpha1_RedisClusterBackupSpec(ref),
+		"./pkg/apis/redis/v1alpha1.RedisClusterBackupStatus":         schema_pkg_apis_redis_v1alpha1_RedisClusterBackupStatus(ref),
 	}
 }
 
@@ -29,14 +32,14 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisCluster(ref common.Reference
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"apiVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -48,19 +51,19 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisCluster(ref common.Reference
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec"),
+							Ref: ref("./pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus"),
+							Ref: ref("./pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec", "github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/redis/v1alpha1.DistributedRedisClusterSpec", "./pkg/apis/redis/v1alpha1.DistributedRedisClusterStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -78,6 +81,24 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 							Format:      "",
 						},
 					},
+					"imagePullPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"imagePullSecrets": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.LocalObjectReference"),
+									},
+								},
+							},
+						},
+					},
 					"command": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
@@ -86,6 +107,18 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
 										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"env": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/core/v1.EnvVar"),
 									},
 								},
 							},
@@ -121,6 +154,13 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 									},
 								},
 							},
+						},
+					},
+					"requiredAntiAffinity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Set RequiredAntiAffinity to force the master-slave node anti-affinity.",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"affinity": {
@@ -159,6 +199,11 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 							Ref: ref("k8s.io/api/core/v1.PodSecurityContext"),
 						},
 					},
+					"containerSecurityContext": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/api/core/v1.SecurityContext"),
+						},
+					},
 					"annotations": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
@@ -175,7 +220,7 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 					},
 					"storage": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisStorage"),
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisStorage"),
 						},
 					},
 					"resources": {
@@ -188,11 +233,21 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterSpec(ref common.Refer
 							Ref: ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
+					"monitor": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.AgentSpec"),
+						},
+					},
+					"init": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.InitSpec"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisStorage", "k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PodSecurityContext", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.Toleration"},
+			"./pkg/apis/redis/v1alpha1.AgentSpec", "./pkg/apis/redis/v1alpha1.InitSpec", "./pkg/apis/redis/v1alpha1.RedisStorage", "k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.EnvVar", "k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.PodSecurityContext", "k8s.io/api/core/v1.ResourceRequirements", "k8s.io/api/core/v1.SecurityContext", "k8s.io/api/core/v1.Toleration"},
 	}
 }
 
@@ -222,16 +277,39 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterStatus(ref common.Ref
 							Format: "int32",
 						},
 					},
+					"minReplicationFactor": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"maxReplicationFactor": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"nodesPlacementInfo": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 					"nodes": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterNode"),
+										Ref: ref("./pkg/apis/redis/v1alpha1.RedisClusterNode"),
 									},
 								},
 							},
+						},
+					},
+					"restore": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.Restore"),
 						},
 					},
 				},
@@ -239,7 +317,7 @@ func schema_pkg_apis_redis_v1alpha1_DistributedRedisClusterStatus(ref common.Ref
 			},
 		},
 		Dependencies: []string{
-			"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterNode"},
+			"./pkg/apis/redis/v1alpha1.RedisClusterNode", "./pkg/apis/redis/v1alpha1.Restore"},
 	}
 }
 
@@ -252,14 +330,14 @@ func schema_pkg_apis_redis_v1alpha1_RedisClusterBackup(ref common.ReferenceCallb
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"apiVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -271,19 +349,173 @@ func schema_pkg_apis_redis_v1alpha1_RedisClusterBackup(ref common.ReferenceCallb
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupSpec"),
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisClusterBackupSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupStatus"),
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisClusterBackupStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupSpec", "github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1.RedisClusterBackupStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/redis/v1alpha1.RedisClusterBackupSpec", "./pkg/apis/redis/v1alpha1.RedisClusterBackupStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_redis_v1alpha1_RedisClusterBackupSchedule(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RedisClusterBackupSchedule is the Schema for scheduling redis cluster backups",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleSpec", "./pkg/apis/redis/v1alpha1.RedisClusterBackupScheduleStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_redis_v1alpha1_RedisClusterBackupScheduleSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RedisClusterBackupScheduleSpec defines the desired state of RedisClusterBackupSchedule",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"schedule": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Schedule in Cron format, see https://en.wikipedia.org/wiki/Cron.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"redisClusterName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RedisClusterName to backup",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"backupTemplate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BackupTemplate defines the backup spec that will be created",
+							Ref:         ref("./pkg/apis/redis/v1alpha1.RedisClusterBackupSpec"),
+						},
+					},
+					"paused": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Paused indicates whether the backup schedule is paused",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"successfulJobsHistoryLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SuccessfulJobsHistoryLimit specifies how many completed jobs should be kept.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"failedJobsHistoryLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FailedJobsHistoryLimit specifies how many failed jobs should be kept.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"retentionPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RetentionPolicy defines how long to keep backups in the PV",
+							Ref:         ref("./pkg/apis/redis/v1alpha1.BackupRetentionPolicy"),
+						},
+					},
+				},
+				Required: []string{"schedule", "redisClusterName", "backupTemplate"},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/redis/v1alpha1.BackupRetentionPolicy", "./pkg/apis/redis/v1alpha1.RedisClusterBackupSpec"},
+	}
+}
+
+func schema_pkg_apis_redis_v1alpha1_RedisClusterBackupScheduleStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RedisClusterBackupScheduleStatus defines the observed state of RedisClusterBackupSchedule",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"lastScheduled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time the backup was successfully scheduled",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastSuccessfulTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time the backup was successfully completed",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastFailedTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time a backup failed",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"active": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Active holds pointers to currently running backup jobs",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -293,8 +525,82 @@ func schema_pkg_apis_redis_v1alpha1_RedisClusterBackupSpec(ref common.ReferenceC
 			SchemaProps: spec.SchemaProps{
 				Description: "RedisClusterBackupSpec defines the desired state of RedisClusterBackup",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"redisClusterName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"storage": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.RedisStorage"),
+						},
+					},
+					"storageSecretName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"local": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.LocalSpec"),
+						},
+					},
+					"s3": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.S3Spec"),
+						},
+					},
+					"gcs": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.GCSSpec"),
+						},
+					},
+					"azure": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.AzureSpec"),
+						},
+					},
+					"swift": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.SwiftSpec"),
+						},
+					},
+					"b2": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.B2Spec"),
+						},
+					},
+					"rest": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/objectstore-api/api/v1.RestServerSpec"),
+						},
+					},
+					"podSpec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/redis/v1alpha1.PodSpec"),
+						},
+					},
+					"activeDeadlineSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
+				},
+				Required: []string{"redisClusterName"},
 			},
 		},
+		Dependencies: []string{
+			"./pkg/apis/redis/v1alpha1.PodSpec", "./pkg/apis/redis/v1alpha1.RedisStorage", "kmodules.xyz/objectstore-api/api/v1.AzureSpec", "kmodules.xyz/objectstore-api/api/v1.B2Spec", "kmodules.xyz/objectstore-api/api/v1.GCSSpec", "kmodules.xyz/objectstore-api/api/v1.LocalSpec", "kmodules.xyz/objectstore-api/api/v1.RestServerSpec", "kmodules.xyz/objectstore-api/api/v1.S3Spec", "kmodules.xyz/objectstore-api/api/v1.SwiftSpec"},
 	}
 }
 
@@ -304,7 +610,52 @@ func schema_pkg_apis_redis_v1alpha1_RedisClusterBackupStatus(ref common.Referenc
 			SchemaProps: spec.SchemaProps{
 				Description: "RedisClusterBackupStatus defines the observed state of RedisClusterBackup",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"startTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "INSERT ADDITIONAL STATUS FIELD - define observed state of cluster",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"completionTime": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"masterSize": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"clusterReplicas": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"clusterImage": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
