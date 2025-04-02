@@ -759,11 +759,13 @@ redis-cli -h "${IP}" BGSAVE
 # Wait for BGSAVE to complete (check lastbgsave_status)
 echo "Waiting for BGSAVE to complete..."
 while true; do
-    BGSAVE_STATUS=$(redis-cli -h "${IP}" INFO persistence | grep lastbgsave_status | cut -d: -f2 | tr -d '\r')
-    BGSAVE_ONGOING=$(redis-cli -h "${IP}" INFO persistence | grep rdb_bgsave_in_progress | cut -d: -f2 | tr -d '\r')
-    echo "BGSAVE status: ${BGSAVE_STATUS}, in progress: ${BGSAVE_ONGOING}"
+    BGSAVE_INFO=$(redis-cli -h "${IP}" INFO persistence)
+    BGSAVE_IN_PROGRESS=$(echo "$BGSAVE_INFO" | grep "rdb_bgsave_in_progress" | cut -d: -f2 | tr -d '\r')
+    BGSAVE_STATUS=$(echo "$BGSAVE_INFO" | grep "rdb_last_bgsave_status" | cut -d: -f2 | tr -d '\r')
     
-    if [ "${BGSAVE_ONGOING}" = "0" ]; then
+    echo "BGSAVE in progress: ${BGSAVE_IN_PROGRESS}, status: ${BGSAVE_STATUS}"
+    
+    if [ "${BGSAVE_IN_PROGRESS}" = "0" ]; then
         if [ "${BGSAVE_STATUS}" = "ok" ]; then
             echo "BGSAVE completed successfully"
             break
@@ -778,10 +780,11 @@ while true; do
 done
 
 # Copy the RDB file from the Redis data directory
-echo "Copying RDB file from Redis data directory..."
+echo "Copying RDB file from Redis data directory to backup location..."
 if [ -f "${REDIS_DATA_PATH}/${RDB_FILENAME}" ]; then
-    cp -v "${REDIS_DATA_PATH}/${RDB_FILENAME}" "${BACKUP_DIR}/${RDB_FILENAME}"
-    echo "Successfully copied dump.rdb"
+    # Use rclone to copy the RDB file to the backup directory
+    rclone copy "${REDIS_DATA_PATH}/${RDB_FILENAME}" "${BACKUP_DIR}/" %s --config=/tmp/rclone-local.conf 2>&1
+    echo "Successfully copied dump.rdb using rclone"
 else
     echo "Failed to find dump.rdb at ${REDIS_DATA_PATH}/${RDB_FILENAME}"
     # Try to find the RDB file in the data directory
