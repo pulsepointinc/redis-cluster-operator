@@ -2,6 +2,7 @@ package redisclusterbackup
 
 import (
 	"context"
+	"fmt"
 
 	batch "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -61,23 +62,6 @@ func (r *ReconcileRedisClusterBackup) isBackupRunning(backup *redisv1alpha1.Redi
 	return false, nil
 }
 
-func upsertEnvVars(vars []corev1.EnvVar, nv ...corev1.EnvVar) []corev1.EnvVar {
-	upsert := func(env corev1.EnvVar) {
-		for i, v := range vars {
-			if v.Name == env.Name {
-				vars[i] = env
-				return
-			}
-		}
-		vars = append(vars, env)
-	}
-
-	for _, env := range nv {
-		upsert(env)
-	}
-	return vars
-}
-
 // Returns the REDIS_PASSWORD environment variable.
 func redisPassword(cluster *redisv1alpha1.DistributedRedisCluster) corev1.EnvVar {
 	secretName := cluster.Spec.PasswordSecret.Name
@@ -109,4 +93,9 @@ func isJobFinished(j *batch.Job) bool {
 		}
 	}
 	return false
+}
+
+// jobName generates a job name for a specific backup and node index
+func jobName(backup *redisv1alpha1.RedisClusterBackup, index int) string {
+	return fmt.Sprintf("%s-%d", backup.JobName(), index)
 }

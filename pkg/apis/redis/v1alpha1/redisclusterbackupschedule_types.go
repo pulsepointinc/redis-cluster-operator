@@ -37,11 +37,11 @@ type RedisClusterBackupScheduleSpec struct {
 
 	// SuccessfulJobsHistoryLimit specifies how many completed jobs should be kept.
 	// +optional
-	SuccessfulJobsHistoryLimit *int32 `json:"successfulJobsHistoryLimit,omitempty"`
+	//SuccessfulJobsHistoryLimit *int32 `json:"successfulJobsHistoryLimit,omitempty"`
 
 	// FailedJobsHistoryLimit specifies how many failed jobs should be kept.
 	// +optional
-	FailedJobsHistoryLimit *int32 `json:"failedJobsHistoryLimit,omitempty"`
+	//FailedJobsHistoryLimit *int32 `json:"failedJobsHistoryLimit,omitempty"`
 
 	// RetentionPolicy defines how long to keep backups in the PV
 	// +optional

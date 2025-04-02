@@ -262,7 +262,7 @@ func (r *ReconcileRedisClusterBackupSchedule) Reconcile(request reconcile.Reques
 	}
 
 	// After successfully updating the status, create a new backup
-	err = r.createBackupJob(instance, reqLogger)
+	err = r.createBackupJob(instance, reqLogger, redisCluster)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -331,11 +331,31 @@ func (r *ReconcileRedisClusterBackupSchedule) addFinalizer(reqLogger logr.Logger
 }
 
 // createBackupJob creates a new backup CR based on the schedule
-func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(schedule *redisv1alpha1.RedisClusterBackupSchedule, logger logr.Logger) error {
+func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(
+	schedule *redisv1alpha1.RedisClusterBackupSchedule,
+	logger logr.Logger,
+	redisCluster *redisv1alpha1.DistributedRedisCluster) error {
+
 	// Create a new backup name based on schedule name and time
 	backupName := generateBackupName(schedule.Name)
 
 	logger.Info("Creating backup from schedule", "BackupName", backupName)
+
+	// Create the backup specs from the template
+	backupSpec := schedule.Spec.BackupTemplate.DeepCopy()
+
+	// Check if BackupSource is specified, otherwise decide based on the cluster
+	//backupSource := backupSpec.BackupSource
+	//if backupSource == "" {
+	//	// Default to replicas if the cluster has replicas, otherwise use masters
+	//	if redisCluster.Spec.ClusterReplicas > 0 {
+	//		backupSource = "replicas"
+	//	} else {
+	//		backupSource = "masters"
+	//	}
+	//	logger.Info("No backup source specified, using auto-detected source", "source", backupSource)
+	//}
+	backupSource := "replicas"
 
 	// Create a new backup CR
 	backup := &redisv1alpha1.RedisClusterBackup{
@@ -343,15 +363,25 @@ func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(schedule *redisv1a
 			Name:      backupName,
 			Namespace: schedule.Namespace,
 			Labels: map[string]string{
-				"created-by": "backup-schedule",
-				"schedule":   schedule.Name,
+				"created-by":    "backup-schedule",
+				"schedule":      schedule.Name,
+				"backup-source": backupSource,
 			},
 			Annotations: map[string]string{
-				"redis.kun/scope": "cluster-scoped",
+				"redis.kun/scope":        "cluster-scoped",
+				"redis.kun/backupSource": backupSource,
 			},
 		},
-		Spec: schedule.Spec.BackupTemplate,
+		Spec: *backupSpec,
 	}
+
+	// Set the BackupSource field in the spec
+	//backup.Spec.BackupSource = backupSource
+
+	// If RetentionPolicy is defined in the schedule, add it to the backup
+	//if schedule.Spec.RetentionPolicy != nil {
+	//	backup.Spec.RetentionPolicy = schedule.Spec.RetentionPolicy.DeepCopy()
+	//}
 
 	// Set the owner reference so the backup is cleaned up when the schedule is deleted
 	if err := controllerutil.SetControllerReference(schedule, backup, r.scheme); err != nil {
@@ -371,7 +401,7 @@ func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(schedule *redisv1a
 		logger.Error(err, "Unable to get reference for backup")
 	} else {
 		r.recorder.Event(schedule, corev1.EventTypeNormal, "BackupCreated",
-			fmt.Sprintf("Created backup %s", backupRef.Name))
+			fmt.Sprintf("Created backup %s from %s", backupRef.Name, backupSource))
 	}
 
 	return nil
@@ -398,9 +428,9 @@ func generateBackupName(scheduleName string) string {
 // cleanupBackups cleans up old backup jobs based on the history limits
 func (r *ReconcileRedisClusterBackupSchedule) cleanupBackups(schedule *redisv1alpha1.RedisClusterBackupSchedule) error {
 	// Don't do anything if history limits are not set
-	if schedule.Spec.SuccessfulJobsHistoryLimit == nil && schedule.Spec.FailedJobsHistoryLimit == nil {
-		return nil
-	}
+	//if schedule.Spec.SuccessfulJobsHistoryLimit == nil && schedule.Spec.FailedJobsHistoryLimit == nil {
+	//	return nil
+	//}
 
 	// Get all backups owned by this schedule
 	backupList := &redisv1alpha1.RedisClusterBackupList{}
@@ -428,8 +458,8 @@ func (r *ReconcileRedisClusterBackupSchedule) cleanupBackups(schedule *redisv1al
 	}
 
 	// Clean up successful backups if limit is set
-	if schedule.Spec.SuccessfulJobsHistoryLimit != nil {
-		successLimit := int(*schedule.Spec.SuccessfulJobsHistoryLimit)
+	if schedule.Spec.RetentionPolicy.MaxCount != nil {
+		successLimit := int(*schedule.Spec.RetentionPolicy.MaxCount)
 		if len(successfulBackups) > successLimit {
 			// Sort backups by completion time (oldest first)
 			sort.Slice(successfulBackups, func(i, j int) bool {
@@ -454,8 +484,8 @@ func (r *ReconcileRedisClusterBackupSchedule) cleanupBackups(schedule *redisv1al
 	}
 
 	// Clean up failed backups if limit is set
-	if schedule.Spec.FailedJobsHistoryLimit != nil {
-		failLimit := int(*schedule.Spec.FailedJobsHistoryLimit)
+	if schedule.Spec.RetentionPolicy.MaxCount != nil {
+		failLimit := int(*schedule.Spec.RetentionPolicy.MaxCount)
 		if len(failedBackups) > failLimit {
 			// Sort backups by completion time (oldest first)
 			sort.Slice(failedBackups, func(i, j int) bool {
