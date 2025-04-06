@@ -4,6 +4,7 @@ require (
 	github.com/appscode/go v0.0.0-20191006073906-e3d193d493fc
 	github.com/appscode/osm v0.12.0
 	github.com/aws/aws-sdk-go v1.20.20
+	github.com/go-delve/delve v1.4.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.2
 	github.com/go-redis/redis v6.15.7+incompatible

@@ -4,19 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	ResourceSingularBackupSchedule = "backupschedule"
-)
-
 // BackupRetentionPolicy defines how long to retain backups
 type BackupRetentionPolicy struct {
 	// MaxCount specifies how many backups should be kept at most
 	// +optional
 	MaxCount *int32 `json:"maxCount,omitempty"`
-
-	// MaxAge specifies how old backups can be before being deleted (in days)
-	// +optional
-	MaxAge *int32 `json:"maxAge,omitempty"`
 }
 
 // RedisClusterBackupScheduleSpec defines the desired state of RedisClusterBackupSchedule
@@ -34,14 +26,6 @@ type RedisClusterBackupScheduleSpec struct {
 	// Paused indicates whether the backup schedule is paused
 	// +optional
 	Paused bool `json:"paused,omitempty"`
-
-	// SuccessfulJobsHistoryLimit specifies how many completed jobs should be kept.
-	// +optional
-	//SuccessfulJobsHistoryLimit *int32 `json:"successfulJobsHistoryLimit,omitempty"`
-
-	// FailedJobsHistoryLimit specifies how many failed jobs should be kept.
-	// +optional
-	//FailedJobsHistoryLimit *int32 `json:"failedJobsHistoryLimit,omitempty"`
 
 	// RetentionPolicy defines how long to keep backups in the PV
 	// +optional

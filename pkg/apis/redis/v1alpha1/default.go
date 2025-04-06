@@ -2,20 +2,18 @@ package v1alpha1
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
-
 	"github.com/go-logr/logr"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"path/filepath"
 )
 
 const (
 	minMasterSize       = 3
 	minClusterReplicas  = 1
-	defaultRedisImage   = "redis:5.0.4-alpine"
+	defaultRedisImage   = "redis:7.2.3-alpine"
 	defaultMonitorImage = "oliver006/redis_exporter:latest"
 )
 
@@ -121,34 +119,33 @@ func DefaultOwnerReferences(cluster *DistributedRedisCluster) []metav1.OwnerRefe
 
 // ValidateBackupSource validates that the BackupSource field has a valid value
 func (in *RedisClusterBackup) ValidateBackupSource() error {
-	//if in.Spec.BackupSource == "" {
-	//	// Empty source is fine - will be determined at runtime
-	//	return nil
-	//}
-	//
-	//if in.Spec.BackupSource != string(BackupSourceMasters) && in.Spec.BackupSource != string(BackupSourceReplicas) {
-	//	return fmt.Errorf("invalid backup source: %s. Must be either '%s' or '%s'",
-	//		in.Spec.BackupSource, BackupSourceMasters, BackupSourceReplicas)
-	//}
+	if in.Spec.BackupSource == "" {
+		// Empty source is fine - will be determined at runtime
+		return nil
+	}
+
+	if in.Spec.BackupSource != BackupSourceMasters && in.Spec.BackupSource != BackupSourceReplicas {
+		return fmt.Errorf("invalid backup source: %s. Must be either '%s' or '%s'",
+			in.Spec.BackupSource, BackupSourceMasters, BackupSourceReplicas)
+	}
 
 	return nil
 }
 
 // DetermineBackupSource determines the appropriate backup source based on the spec and cluster
 func (in *RedisClusterBackup) DetermineBackupSource(cluster *DistributedRedisCluster) string {
-	//// If explicitly set, use the specified source
-	//if in.Spec.BackupSource != "" {
-	//	return in.Spec.BackupSource
-	//}
-	//
-	//// Otherwise, use replicas if available
-	//if cluster != nil && cluster.Spec.ClusterReplicas > 0 {
-	//	return string(BackupSourceReplicas)
-	//}
-	//
-	//// Default to masters if no replicas or cluster info not available
-	//return string(BackupSourceMasters)
-	return "replicas"
+	// If explicitly set, use the specified source
+	if in.Spec.BackupSource != "" {
+		return in.Spec.BackupSource
+	}
+
+	// Otherwise, use replicas if available
+	if cluster != nil && cluster.Spec.ClusterReplicas > 0 {
+		return BackupSourceReplicas
+	}
+
+	// Default to replicas if no replicas or cluster info not available
+	return BackupSourceReplicas
 }
 
 func (in *RedisClusterBackup) Validate() error {
@@ -215,78 +212,10 @@ func (in *RedisClusterBackup) IsRefLocalPVC() bool {
 
 // IsBackupFromReplicas checks if this backup is/will be from replicas
 func (in *RedisClusterBackup) IsBackupFromReplicas() bool {
-	return true
-	//return in.Spec.BackupSource == string(BackupSourceReplicas) ||
-	//	(in.Status.BackupSource != "" && in.Status.BackupSource == string(BackupSourceReplicas))
+	return in.Spec.BackupSource == BackupSourceReplicas || in.Spec.BackupSource == ""
 }
 
 // IsBackupFromMasters checks if this backup is/will be from masters
 func (in *RedisClusterBackup) IsBackupFromMasters() bool {
-	return false
-	//return in.Spec.BackupSource == string(BackupSourceMasters) ||
-	//	(in.Status.BackupSource != "" && in.Status.BackupSource == string(BackupSourceMasters)) ||
-	//	(in.Spec.BackupSource == "" && in.Status.BackupSource == "") // Default is masters
-}
-
-// GetBackupSourceLabel returns a label value for the backup source
-func (in *RedisClusterBackup) GetBackupSourceLabel() string {
-	//if in.Spec.BackupSource != "" {
-	//	return in.Spec.BackupSource
-	//}
-	//if in.Status.BackupSource != "" {
-	//	return in.Status.BackupSource
-	//}
-	//return string(BackupSourceMasters) // Default
-	return "replicas"
-}
-
-// CreateReplicaBackupScript generates a shell script for backing up from a Redis replica
-func CreateReplicaBackupScript(redisIP string, dataDir string) string {
-	return strings.TrimSpace(`
-#!/bin/bash
-set -e
-
-# Create backup directory
-mkdir -p ` + dataDir + `
-
-# Use redis-cli to create a dump.rdb file from the replica
-redis-cli -h ` + redisIP + ` --rdb ` + dataDir + `/dump.rdb
-
-# Copy configuration file if it exists
-if [ -f /var/lib/redis-replica-data/redis.conf ]; then
-  cp /var/lib/redis-replica-data/redis.conf ` + dataDir + `/
-fi
-
-# Copy any other important files
-if [ -d /var/lib/redis-replica-data/appendonly ]; then
-  cp -r /var/lib/redis-replica-data/appendonly ` + dataDir + `/
-fi
-
-echo "Backup from replica completed successfully"
-`)
-}
-
-// GetReplicaBackupCommand returns the command to execute the replica backup
-func GetReplicaBackupCommand(redisIP string, replicaData string, dataDir string, withPassword bool) []string {
-	var cmd []string
-
-	if withPassword {
-		cmd = []string{
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf("redis-cli -h %s -a \"${REDIS_PASSWORD}\" --rdb %s/dump.rdb && "+
-				"if [ -d \"%s\" ]; then cp -r %s/* %s/ || true; fi",
-				redisIP, dataDir, replicaData, replicaData, dataDir),
-		}
-	} else {
-		cmd = []string{
-			"/bin/bash",
-			"-c",
-			fmt.Sprintf("redis-cli -h %s --rdb %s/dump.rdb && "+
-				"if [ -d \"%s\" ]; then cp -r %s/* %s/ || true; fi",
-				redisIP, dataDir, replicaData, replicaData, dataDir),
-		}
-	}
-
-	return cmd
+	return in.Spec.BackupSource == BackupSourceMasters
 }

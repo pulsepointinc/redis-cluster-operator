@@ -30,13 +30,13 @@ const (
 )
 
 // BackupSource defines where to source the backup data from
-//type BackupSource string
+type BackupSource string
 
 const (
-// BackupSourceMasters defines that backups should come from master nodes
-// BackupSourceMasters BackupSource = "masters"
-// BackupSourceReplicas defines that backups should come from replica nodes
-// BackupSourceReplicas BackupSource = "replicas"
+	// BackupSourceMasters defines that backups should come from master nodes
+	BackupSourceMasters = "masters"
+	// BackupSourceReplicas defines that backups should come from replica nodes
+	BackupSourceReplicas = "replicas"
 )
 
 // ClusterStatus Redis Cluster status

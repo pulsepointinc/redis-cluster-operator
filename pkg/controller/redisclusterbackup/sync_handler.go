@@ -1,7 +1,6 @@
 package redisclusterbackup
 
 import (
-	"context"
 	"fmt"
 	"github.com/go-logr/logr"
 	redisv1alpha1 "github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1"
@@ -11,11 +10,17 @@ import (
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+//Error Handling in Job Completion Logic: In handleBackupJobs, the function successfully marks backups as completed or failed, but doesn't properly handle partial failures. If some but not all jobs fail, it's marked as "Partially successful" but still sets the phase to BackupPhaseSucceeded. This could be misleading.
+
+import (
+	"context"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *ReconcileRedisClusterBackup) create(reqLogger logr.Logger, backup *redisv1alpha1.RedisClusterBackup) error {
@@ -893,6 +898,7 @@ exit 0
 		nodeInfo.IP,
 		nodeInfo.Role,
 		rcloneOptions,
+		rcloneOptions,
 		nodeInfo.Role,
 		rcloneOptions,
 		rcloneOptions,
@@ -999,10 +1005,9 @@ func (r *ReconcileRedisClusterBackup) createCleanupInitContainers(backup *redisv
 
 	// Add init containers for cleanup if retention policy exists
 	if retentionPolicy != nil {
-		if retentionPolicy.MaxCount != nil || retentionPolicy.MaxAge != nil {
+		if retentionPolicy.MaxCount != nil {
 			reqLogger.Info("Adding cleanup init container with retention policy",
-				"MaxCount", retentionPolicy.MaxCount,
-				"MaxAge", retentionPolicy.MaxAge)
+				"MaxCount", retentionPolicy.MaxCount)
 
 			// Generate cleanup script
 			cleanupScript := generateCleanupScript(retentionPolicy)
@@ -1090,44 +1095,6 @@ for NAMESPACE in */; do
             echo "No need to clean up based on count, have $TOTAL_BACKUPS backups with limit %d"
         fi
 `, maxCount, maxCount, maxCount, maxCount, maxCount)
-	}
-
-	// If MaxAge is set, add script to remove backups older than the specified age
-	if policy.MaxAge != nil {
-		maxAgeDays := *policy.MaxAge
-		script += fmt.Sprintf(`
-        # Remove backups older than %d days
-        echo "Checking for backups older than %d days..."
-        NOW=$(date +%%s)
-        MAX_AGE_SECONDS=$((60 * 60 * 24 * %d))
-        
-        for DIR in $BACKUP_DIRS; do
-            # Extract timestamp from directory name (last component)
-            DIR_NAME=$(basename "$DIR")
-            if [[ $DIR_NAME =~ ^[0-9]{14}$ ]]; then
-                # Parse YYYYMMDDHHMMSS format
-                YEAR="${DIR_NAME:0:4}"
-                MONTH="${DIR_NAME:4:2}"
-                DAY="${DIR_NAME:6:2}"
-                HOUR="${DIR_NAME:8:2}"
-                MINUTE="${DIR_NAME:10:2}"
-                SECOND="${DIR_NAME:12:2}"
-                
-                # Convert to Unix timestamp (using GNU date)
-                BACKUP_TIME=$(date -u -d "$YEAR-$MONTH-$DAY $HOUR:$MINUTE:$SECOND" +%%s 2>/dev/null || date -u -j -f "%%Y%%m%%d%%H%%M%%S" "$DIR_NAME" +%%s 2>/dev/null)
-                
-                if [ -n "$BACKUP_TIME" ]; then
-                    AGE_SECONDS=$((NOW - BACKUP_TIME))
-                    if [ $AGE_SECONDS -gt $MAX_AGE_SECONDS ]; then
-                        echo "Deleting backup older than %d days: $DIR"
-                        rm -rf "$DIR"
-                    fi
-                else
-                    echo "Warning: Could not parse timestamp from directory $DIR"
-                fi
-            fi
-        done
-`, maxAgeDays, maxAgeDays, maxAgeDays, maxAgeDays)
 	}
 
 	script += `

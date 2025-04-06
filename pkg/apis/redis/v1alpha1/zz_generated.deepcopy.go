@@ -71,11 +71,6 @@ func (in *BackupRetentionPolicy) DeepCopyInto(out *BackupRetentionPolicy) {
 		*out = new(int32)
 		**out = **in
 	}
-	if in.MaxAge != nil {
-		in, out := &in.MaxAge, &out.MaxAge
-		*out = new(int32)
-		**out = **in
-	}
 	return
 }
 
