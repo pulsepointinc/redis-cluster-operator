@@ -76,7 +76,7 @@ You can find example configurations in the repository:
 The operator supports different storage options for Redis data and backups:
 
 1. **Persistent Storage** (recommended for production): Uses PersistentVolumeClaims
-   2**Ephemeral Storage**: For testing and development scenarios
+2. **Ephemeral Storage**: For testing and development scenarios
 
 For backups, you typically need a PVC with sufficient space and the appropriate access mode (cephfs ReadWriteMany for
 example ).
