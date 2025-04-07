@@ -4,8 +4,9 @@
 
 - [1. Purpose of the Operator](#1-purpose-of-the-operator)
 - [2. Custom Resources Introduced](#2-custom-resources-introduced)
+- [3. Example Redis Cluster Resources](#3-example-redis-cluster-resources)
 - [4. Storage Options](#4-storage-options)
-- [5. Creating a Backup](#5-creating-a-backup)
+- [5. Creating a One-Time Backup](#5-creating-a-one-time-backup)
 - [6. Creating a Backup Schedule](#6-creating-a-backup-schedule)
 - [7. Restore Process](#7-restore-process)
 
@@ -20,9 +21,9 @@ The operator introduces three main Custom Resource Definitions (CRDs):
 
 1. **DistributedRedisCluster**: Defines a Redis Cluster with its configuration, size, resource requirements, and
    topology.
-    - Specifies what to back up
-    - Configures where to store the backup
-    - Controls how the backup should be performed (from replicas or masters)
+    - Controls the number of master nodes and replicas per master
+    - Configures Redis parameters
+    - Specifies resource allocation and node placement
 
    [example](deploy/example/pulsepoint/redis-test-cluster.yaml)
 
@@ -30,7 +31,6 @@ The operator introduces three main Custom Resource Definitions (CRDs):
   kubectl  get distributedredisclusters.redis.kun -n redis
   NAME     MASTERSIZE   STATUS    AGE
   redis-test   6            Healthy   3d23h
-
 ```
 
 2. **RedisClusterBackup**: Defines a single backup operation for a Redis Cluster.
@@ -59,10 +59,29 @@ The operator introduces three main Custom Resource Definitions (CRDs):
     k  get redisclusterbackupschedules.redis.kun -n redis
     NAME              AGE
     redis-test-schedule   3d
-
 ```
 
-## 5. Creating a one-time backup Backup
+## 3. Example Redis Cluster Resources
+
+The Redis Cluster Operator manages Redis deployments through Kubernetes custom resources.
+You can find example configurations in the repository:
+
+- [Example Redis Cluster](deploy/example/pulsepoint/redis-test-cluster.yaml)
+- [Example Backup](deploy/example/pulsepoint/redis-test-cluster-backup.yaml)
+- [Example Backup Schedule](deploy/example/pulsepoint/redis-test-cluster-backup-schedule.yaml)
+- [Example Restored Cluster](deploy/example/pulsepoint/redis-test-cluster-restored.yaml)
+
+## 4. Storage Options
+
+The operator supports different storage options for Redis data and backups:
+
+1. **Persistent Storage** (recommended for production): Uses PersistentVolumeClaims
+   2**Ephemeral Storage**: For testing and development scenarios
+
+For backups, you typically need a PVC with sufficient space and the appropriate access mode (cephfs ReadWriteMany for
+example ).
+
+## 5. Creating a One-Time Backup
 
 To create a one-time backup of your Redis Cluster:
 
@@ -88,7 +107,7 @@ When you apply this resource, the operator will:
 1. Create backup jobs for each Redis **Slave** node. Backup jobs will start backup pods for each Redis **slave** node
 2. Mount local path storage from a slave node to the backup pod
 3. Use BGSAVE to create RDB dumps on these slave nodes
-   4Copy the backup files from local path storage to the backup PVC
+4. Copy the backup files from local path storage to the backup PVC
 
 ## 6. Creating a Backup Schedule
 
@@ -130,7 +149,11 @@ retention policy.
 1. **Create a restore cluster**: You need to create a new `DistributedRedisCluster` with the `init.backupSource`
    field pointing to the backup you want to restore from.
 
-2. **Initialization Process**: The operator detects the restoration request and:
+   !Set the new `serviceName: redis-test-restored` if you want to customize the service name
+
+
+2. **Initialization Process**:
+   The operator detects the restoration request and:
     - Creates the new Redis cluster infrastructure (pods, services, etc.)
     - Before Redis initializes, it copies the backup data (RDB files and cluster config) from the specified backup
     - Starts the Redis nodes with the restored data
@@ -141,7 +164,7 @@ retention policy.
 
 ### Example Restore Configuration
 
-[example](deploy/example/pulsepoint/redis-test-cluster-restored.yaml)
+[ example ](deploy/example/pulsepoint/redis-test-cluster-restored.yaml)
 
 ```yaml
 apiVersion: redis.kun/v1alpha1
@@ -161,11 +184,6 @@ spec:
       name: redis-test-03-04-2025  # Name of the backup to restore from
       namespace: redis
 ```
-
-The key part is the `init.backupSource` section which points to the specific backup (`frqcap-03-04-2025`) in the `redis`
-namespace.
-
-
 
 ===================
 
