@@ -1,0 +1,19 @@
+apiVersion: redis.kun/v1alpha1
+kind: RedisClusterBackupSchedule
+metadata:
+  annotations:
+    redis.kun/scope: cluster-scoped
+  name: redis-test-schedule
+  namespace: redis
+spec:
+  schedule: "45 * * * *"
+  redisClusterName: redis-test
+  retentionPolicy:
+    maxCount: 2
+  backupTemplate:
+    image: registry.pulsepoint.com/redis-tools:1.0.5-operator
+    redisClusterName: redis-test
+    local:
+      mountPath: /back
+      persistentVolumeClaim:
+        claimName: redis-test-backup

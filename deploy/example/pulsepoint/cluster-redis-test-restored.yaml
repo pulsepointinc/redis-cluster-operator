@@ -1,0 +1,122 @@
+apiVersion: redis.kun/v1alpha1
+kind: DistributedRedisCluster
+metadata:
+  annotations:
+    redis.kun/scope: cluster-scoped
+  name: redis-test-restored
+  namespace: redis
+spec:
+  image: registry.pulsepoint.com/redis:7.2.3-alpine
+  masterSize: 6
+  clusterReplicas: 1
+  serviceName: redis-test-restored-restored
+  config:
+    daemonize: "no"
+    tcp-backlog: "2048"
+    timeout: "0"
+    tcp-keepalive: "600"
+    loglevel: notice
+    logfile: ""
+    syslog-enabled: "no"
+    syslog-ident: redis
+    syslog-facility: local0
+    databases: "1"
+    stop-writes-on-bgsave-error: "no"
+    rdbcompression: "yes"
+    rdbchecksum: "yes"
+    dbfilename: dump.rdb
+    save: ""
+
+    slave-serve-stale-data: "yes"
+    slave-read-only: "yes"
+    repl-diskless-sync: "no"
+    repl-diskless-sync-delay: "5"
+    repl-timeout: "600"
+    repl-disable-tcp-nodelay: "no"
+    repl-backlog-size: "1024mb"
+    slave-priority: "100"
+
+    maxclients: "65535"
+    maxmemory: "9200mb"
+    maxmemory-policy: allkeys-lru
+    appendonly: "no"
+    appendfilename: "appendonly.aof"
+    appendfsync: everysec
+    no-appendfsync-on-rewrite: "no"
+    auto-aof-rewrite-percentage: "100"
+    auto-aof-rewrite-min-size: "64mb"
+    aof-load-truncated: "yes"
+    lua-time-limit: "5000"
+    cluster-enabled: "yes"
+
+    cluster-slave-validity-factor: "0"
+    cluster-migration-barrier: "1"
+    cluster-require-full-coverage: "no"
+
+    protected-mode: "no"
+
+    slowlog-log-slower-than: "10000"
+    slowlog-max-len: "128"
+    latency-monitor-threshold: "1000"
+    notify-keyspace-events: ""
+    hash-max-ziplist-entries: "512"
+    set-max-intset-entries: "512"
+    zset-max-ziplist-entries: "128"
+    zset-max-ziplist-value: "64"
+    hll-sparse-max-bytes: "3000"
+    activerehashing: "yes"
+    hz: "10"
+    aof-rewrite-incremental-fsync: "yes"
+  monitor:
+    image: registry.pulsepoint.com/redis_exporter:v1.46.0
+    resources:
+      limits:
+        cpu: 100m
+        memory: 100Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+  nodeSelector:
+    redis: "true"
+  toleRations:
+    - effect: NoSchedule
+      key: redis
+      operator: Equal
+      value: "true"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 12Gi
+    requests:
+      cpu: 2000m
+      memory: 12Gi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: redis.kun/name
+                  operator: In
+                  values:
+                    - redis-test-restored
+            topologyKey: kubernetes.io/hostname
+        - weight: 10
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: redis.kun/name
+                  operator: In
+                  values:
+                    - redis-test-restored
+            topologyKey: statefulSet
+  storage:
+    class: local-path-redis
+    size: 30Gi
+    type: persistent-claim
+    deleteClaim: false
+  init:
+    backupSource:
+      name: redis-test-restored-03-04-2025
+      namespace: redis
