@@ -23,20 +23,8 @@ const (
 	RedisClusterNodeRoleMaster RedisRole = "Master"
 	// RedisClusterNodeRoleSlave RedisCluster Slave node role
 	RedisClusterNodeRoleSlave RedisRole = "Slave"
-	// RedisClusterNodeRoleReplica RedisCluster Replica node role - alias for Slave
-	RedisClusterNodeRoleReplica RedisRole = "Slave"
 	// RedisClusterNodeRoleNone None node role
 	RedisClusterNodeRoleNone RedisRole = "None"
-)
-
-// BackupSource defines where to source the backup data from
-type BackupSource string
-
-const (
-	// BackupSourceMasters defines that backups should come from master nodes
-	BackupSourceMasters = "masters"
-	// BackupSourceReplicas defines that backups should come from replica nodes
-	BackupSourceReplicas = "replicas"
 )
 
 // ClusterStatus Redis Cluster status
@@ -93,9 +81,6 @@ const (
 
 	BackupKey         = ResourceSingularBackup + "." + GenericKey
 	LabelBackupStatus = BackupKey + "/status"
-	// Label and annotation for backup source (masters or replicas)
-	LabelBackupSource      = BackupKey + "/source"
-	AnnotationBackupSource = GenericKey + "/backup-source"
 
 	AnnotationJobType = GenericKey + "/job-type"
 

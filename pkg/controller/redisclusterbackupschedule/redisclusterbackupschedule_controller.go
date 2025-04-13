@@ -20,7 +20,6 @@ import (
 	"k8s.io/client-go/tools/reference"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -173,9 +172,6 @@ func (r *ReconcileRedisClusterBackupSchedule) Reconcile(request reconcile.Reques
 			if err := r.finalizeBackupSchedule(reqLogger, instance); err != nil {
 				return reconcile.Result{}, err
 			}
-
-			// Remove backupScheduleFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
 			instance.SetFinalizers(remove(instance.GetFinalizers(), backupScheduleFinalizer))
 			err := r.client.Update(context.TODO(), instance)
 			if err != nil {
@@ -310,8 +306,7 @@ func (r *ReconcileRedisClusterBackupSchedule) isBackupInProgress(schedule *redis
 
 // finalizeBackupSchedule handles any necessary cleanup when the schedule is being deleted
 func (r *ReconcileRedisClusterBackupSchedule) finalizeBackupSchedule(reqLogger logr.Logger, schedule *redisv1alpha1.RedisClusterBackupSchedule) error {
-	// No need to do anything special here, the owner reference on the backups will
-	// ensure they get cleaned up by the garbage collector
+	// No need to do anything special here
 	reqLogger.Info("Successfully finalized RedisClusterBackupSchedule")
 	return nil
 }
@@ -344,17 +339,6 @@ func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(
 	// Create the backup specs from the template
 	backupSpec := schedule.Spec.BackupTemplate.DeepCopy()
 
-	// Check if BackupSource is specified, otherwise decide based on the cluster
-	//backupSource := backupSpec.BackupSource
-	//if backupSource == "" {
-	//	// Default to replicas if the cluster has replicas, otherwise use masters
-	//	if redisCluster.Spec.ClusterReplicas > 0 {
-	//		backupSource = "replicas"
-	//	} else {
-	//		backupSource = "masters"
-	//	}
-	//	logger.Info("No backup source specified, using auto-detected source", "source", backupSource)
-	//}
 	backupSource := "replicas"
 
 	// Create a new backup CR
@@ -373,19 +357,6 @@ func (r *ReconcileRedisClusterBackupSchedule) createBackupJob(
 			},
 		},
 		Spec: *backupSpec,
-	}
-
-	// Set the BackupSource field in the spec
-	//backup.Spec.BackupSource = backupSource
-
-	// If RetentionPolicy is defined in the schedule, add it to the backup
-	//if schedule.Spec.RetentionPolicy != nil {
-	//	backup.Spec.RetentionPolicy = schedule.Spec.RetentionPolicy.DeepCopy()
-	//}
-
-	// Set the owner reference so the backup is cleaned up when the schedule is deleted
-	if err := controllerutil.SetControllerReference(schedule, backup, r.scheme); err != nil {
-		return err
 	}
 
 	// Create the backup using direct client to avoid caching issues
@@ -427,11 +398,6 @@ func generateBackupName(scheduleName string) string {
 
 // cleanupBackups cleans up old backup jobs based on the history limits
 func (r *ReconcileRedisClusterBackupSchedule) cleanupBackups(schedule *redisv1alpha1.RedisClusterBackupSchedule) error {
-	// Don't do anything if history limits are not set
-	//if schedule.Spec.SuccessfulJobsHistoryLimit == nil && schedule.Spec.FailedJobsHistoryLimit == nil {
-	//	return nil
-	//}
-
 	// Get all backups owned by this schedule
 	backupList := &redisv1alpha1.RedisClusterBackupList{}
 	listOpts := []client.ListOption{

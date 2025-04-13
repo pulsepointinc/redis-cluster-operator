@@ -14,8 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//Error Handling in Job Completion Logic: In handleBackupJobs, the function successfully marks backups as completed or failed, but doesn't properly handle partial failures. If some but not all jobs fail, it's marked as "Partially successful" but still sets the phase to BackupPhaseSucceeded. This could be misleading.
-
 import (
 	"context"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -139,56 +137,29 @@ func (r *ReconcileRedisClusterBackup) create(reqLogger logr.Logger, backup *redi
 
 	// Create the backup jobs based on the backup source
 	var nodesInfo []NodeInfo
-	var sourceType string
+	var sourceType = "replica"
 
-	if backup.IsBackupFromReplicas() {
-		// Get replica node info if backing up from replicas
-		nodesInfo, err = r.getReplicaNodesInfo(backup.Namespace, cluster)
-		if err != nil {
-			message := fmt.Sprintf("Failed to get replica nodes info: %v", err)
-			r.recorder.Event(
-				backup,
-				corev1.EventTypeWarning,
-				event.BackupError,
-				message,
-			)
-			return r.markAsFailedBackup(backup, message)
-		}
-		if len(nodesInfo) == 0 {
-			message := "No replica nodes found for backup"
-			r.recorder.Event(
-				backup,
-				corev1.EventTypeWarning,
-				event.BackupError,
-				message,
-			)
-			return r.markAsFailedBackup(backup, message)
-		}
-		sourceType = "replica"
-	} else {
-		// Get master node info if backing up from masters
-		nodesInfo, err = r.getMasterNodesInfo(backup.Namespace, cluster)
-		if err != nil {
-			message := fmt.Sprintf("Failed to get master nodes info: %v", err)
-			r.recorder.Event(
-				backup,
-				corev1.EventTypeWarning,
-				event.BackupError,
-				message,
-			)
-			return r.markAsFailedBackup(backup, message)
-		}
-		if len(nodesInfo) == 0 {
-			message := "No master nodes found for backup"
-			r.recorder.Event(
-				backup,
-				corev1.EventTypeWarning,
-				event.BackupError,
-				message,
-			)
-			return r.markAsFailedBackup(backup, message)
-		}
-		sourceType = "master"
+	// Get replica node info if backing up from replicas
+	nodesInfo, err = r.getReplicaNodesInfo(backup.Namespace, cluster)
+	if err != nil {
+		message := fmt.Sprintf("Failed to get replica nodes info: %v", err)
+		r.recorder.Event(
+			backup,
+			corev1.EventTypeWarning,
+			event.BackupError,
+			message,
+		)
+		return r.markAsFailedBackup(backup, message)
+	}
+	if len(nodesInfo) == 0 {
+		message := "No replica nodes found for backup"
+		r.recorder.Event(
+			backup,
+			corev1.EventTypeWarning,
+			event.BackupError,
+			message,
+		)
+		return r.markAsFailedBackup(backup, message)
 	}
 
 	// Create the backup jobs
@@ -222,7 +193,6 @@ func (r *ReconcileRedisClusterBackup) create(reqLogger logr.Logger, backup *redi
 
 	backup.Labels[redisv1alpha1.LabelClusterName] = backup.Spec.RedisClusterName
 	backup.Labels[redisv1alpha1.LabelBackupStatus] = string(redisv1alpha1.BackupPhaseRunning)
-	backup.Labels[redisv1alpha1.LabelBackupSource] = "replicas"
 	if err := r.crController.UpdateCR(backup); err != nil {
 		r.recorder.Event(
 			backup,
@@ -413,7 +383,7 @@ func (r *ReconcileRedisClusterBackup) getReplicaNodesInfo(namespace string, clus
 	// Find replica nodes and their associated pods
 	index := 0
 	for _, node := range cluster.Status.Nodes {
-		if node.Role == redisv1alpha1.RedisClusterNodeRoleReplica {
+		if node.Role == redisv1alpha1.RedisClusterNodeRoleSlave {
 			info := NodeInfo{
 				IP:          node.IP,
 				Role:        string(node.Role),
@@ -495,7 +465,6 @@ func (r *ReconcileRedisClusterBackup) createNodeBackupJob(reqLogger logr.Logger,
 		redisv1alpha1.LabelClusterName:  backup.Spec.RedisClusterName,
 		redisv1alpha1.AnnotationJobType: redisv1alpha1.JobTypeBackup,
 		redisv1alpha1.LabelBackupStatus: string(redisv1alpha1.BackupPhaseRunning),
-		redisv1alpha1.LabelBackupSource: "replicas",
 		"redis.kun/node-index":          fmt.Sprintf("%d", nodeInfo.Index),
 		"redis.kun/node-role":           nodeInfo.Role,
 		"redis.kun/backup-name":         backup.Name,
@@ -946,7 +915,7 @@ exit 0
 	}
 
 	// Add master reference for replica nodes
-	if nodeInfo.Role == string(redisv1alpha1.RedisClusterNodeRoleReplica) && nodeInfo.MasterRef != "" {
+	if nodeInfo.Role == string(redisv1alpha1.RedisClusterNodeRoleSlave) && nodeInfo.MasterRef != "" {
 		container.Env = append(container.Env, corev1.EnvVar{
 			Name:  "MASTER_REF",
 			Value: nodeInfo.MasterRef,
@@ -971,13 +940,6 @@ exit 0
 	}
 
 	return container, nil
-}
-
-// Legacy createBackupContainer method is now deprecated
-// Use createBackupContainerWithRclone instead for all backups
-func (r *ReconcileRedisClusterBackup) createBackupContainer(backup *redisv1alpha1.RedisClusterBackup, cluster *redisv1alpha1.DistributedRedisCluster, nodeInfo NodeInfo, reqLogger logr.Logger) (corev1.Container, error) {
-	// Forward to the rclone implementation instead
-	return r.createBackupContainerWithRclone(backup, cluster, nodeInfo, reqLogger)
 }
 
 // createCleanupInitContainers creates init containers for cleanup if retention policy exists
@@ -1351,7 +1313,7 @@ func (r *ReconcileRedisClusterBackup) handleBackupJobs(reqLogger logr.Logger, ba
 		)
 	} else {
 		// Partial success
-		backup.Status.Phase = redisv1alpha1.BackupPhaseSucceeded
+		backup.Status.Phase = redisv1alpha1.BackupPhaseFailed
 		backup.Status.Reason = fmt.Sprintf("Partially successful backup: %d/%d jobs succeeded", jobsCompleted, totalJobs)
 		t := metav1.Now()
 		backup.Status.CompletionTime = &t

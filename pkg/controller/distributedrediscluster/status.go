@@ -128,7 +128,10 @@ func (r *ReconcileDistributedRedisCluster) updateClusterIfNeed(cluster *redisv1a
 		reqLogger.WithValues("namespace", cluster.Namespace, "name", cluster.Name).
 			V(3).Info("status changed")
 		cluster.Status = *newStatus
-		r.crController.UpdateCRStatus(cluster)
+		err := r.crController.UpdateCRStatus(cluster)
+		if err != nil {
+			reqLogger.Error(err, "error: failed to update status")
+		}
 	}
 }
 

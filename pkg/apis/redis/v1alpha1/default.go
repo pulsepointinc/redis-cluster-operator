@@ -90,10 +90,6 @@ func (in *DistributedRedisCluster) IsRestoreRestarting() bool {
 	return in.Status.Restore.Phase == RestorePhaseRestart
 }
 
-func (in *DistributedRedisCluster) HasReplicas() bool {
-	return in.Spec.ClusterReplicas > 0
-}
-
 func defaultResource() *v1.ResourceRequirements {
 	return &v1.ResourceRequirements{
 		Requests: v1.ResourceList{
@@ -117,48 +113,11 @@ func DefaultOwnerReferences(cluster *DistributedRedisCluster) []metav1.OwnerRefe
 	}
 }
 
-// ValidateBackupSource validates that the BackupSource field has a valid value
-func (in *RedisClusterBackup) ValidateBackupSource() error {
-	if in.Spec.BackupSource == "" {
-		// Empty source is fine - will be determined at runtime
-		return nil
-	}
-
-	if in.Spec.BackupSource != BackupSourceMasters && in.Spec.BackupSource != BackupSourceReplicas {
-		return fmt.Errorf("invalid backup source: %s. Must be either '%s' or '%s'",
-			in.Spec.BackupSource, BackupSourceMasters, BackupSourceReplicas)
-	}
-
-	return nil
-}
-
-// DetermineBackupSource determines the appropriate backup source based on the spec and cluster
-func (in *RedisClusterBackup) DetermineBackupSource(cluster *DistributedRedisCluster) string {
-	// If explicitly set, use the specified source
-	if in.Spec.BackupSource != "" {
-		return in.Spec.BackupSource
-	}
-
-	// Otherwise, use replicas if available
-	if cluster != nil && cluster.Spec.ClusterReplicas > 0 {
-		return BackupSourceReplicas
-	}
-
-	// Default to replicas if no replicas or cluster info not available
-	return BackupSourceReplicas
-}
-
 func (in *RedisClusterBackup) Validate() error {
 	clusterName := in.Spec.RedisClusterName
 	if clusterName == "" {
 		return fmt.Errorf("backup [RedisClusterName] is missing")
 	}
-
-	// Validate BackupSource field if present
-	if err := in.ValidateBackupSource(); err != nil {
-		return err
-	}
-
 	// BucketName can't be empty
 	if in.Spec.S3 == nil && in.Spec.GCS == nil && in.Spec.Azure == nil && in.Spec.Swift == nil && in.Spec.Local == nil {
 		return fmt.Errorf("no storage provider is configured")
@@ -176,24 +135,19 @@ func (in *RedisClusterBackup) Validate() error {
 func (in *RedisClusterBackup) RemotePath() (string, error) {
 	spec := in.Spec.Backend
 	timePrefix := in.Status.StartTime.Format("20060102150405")
-
-	// Get the base path
-	var basePath string
 	if spec.S3 != nil {
-		basePath = filepath.Join(spec.S3.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix)
+		return filepath.Join(spec.S3.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	} else if spec.GCS != nil {
-		basePath = filepath.Join(spec.GCS.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix)
+		return filepath.Join(spec.GCS.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	} else if spec.Azure != nil {
-		basePath = filepath.Join(spec.Azure.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix)
+		return filepath.Join(spec.Azure.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	} else if spec.Local != nil {
-		basePath = filepath.Join(DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix)
+		return filepath.Join(DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	} else if spec.Swift != nil {
-		basePath = filepath.Join(spec.Swift.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix)
-	} else {
-		return "", fmt.Errorf("no storage provider is configured")
+		return filepath.Join(spec.Swift.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	}
 
-	return basePath, nil
+	return "", fmt.Errorf("no storage provider is configured")
 }
 
 func (in *RedisClusterBackup) RCloneSecretName() string {
@@ -206,16 +160,4 @@ func (in *RedisClusterBackup) JobName() string {
 
 func (in *RedisClusterBackup) IsRefLocalPVC() bool {
 	return in.Spec.Local != nil && in.Spec.Local.PersistentVolumeClaim != nil
-}
-
-// Helper functions for working with backup sources
-
-// IsBackupFromReplicas checks if this backup is/will be from replicas
-func (in *RedisClusterBackup) IsBackupFromReplicas() bool {
-	return in.Spec.BackupSource == BackupSourceReplicas || in.Spec.BackupSource == ""
-}
-
-// IsBackupFromMasters checks if this backup is/will be from masters
-func (in *RedisClusterBackup) IsBackupFromMasters() bool {
-	return in.Spec.BackupSource == BackupSourceMasters
 }

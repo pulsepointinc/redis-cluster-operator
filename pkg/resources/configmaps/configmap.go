@@ -37,10 +37,28 @@ failover() {
 	fi
 	echo "Wait for MASTER <-> SLAVE syncFinished"
 	sleep 20
+	
+	# Add backup after failover completes for master nodes
+	save_data
 }
+
+save_data() {
+	echo "Performing SAVE to ensure data persistence"
+	password=$(cat /data/redis_password)
+	if [[ -z "${password}" ]]; then
+		redis-cli SAVE
+	else
+		redis-cli -a "${password}" SAVE
+	fi
+	echo "Redis SAVE completed"
+}
+
 if [ -f ${CLUSTER_CONFIG} ]; then
 	cat ${CLUSTER_CONFIG} | grep "myself" | grep "master" && \
 	failover
+else
+	# For non-master nodes or when config doesn't exist, just save
+	save_data
 fi`
 
 	// Fixed Nodes.conf does not update IP address of a node when IP changes after restart,

@@ -2,10 +2,6 @@ package redisclusterbackup
 
 import (
 	"context"
-	"fmt"
-	"k8s.io/apimachinery/pkg/types"
-	"time"
-
 	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 	batch "k8s.io/api/batch/v1"
@@ -292,50 +288,4 @@ func isJobCompleted(newJob *batch.Job) bool {
 		return true
 	}
 	return false
-}
-
-// Update the CRStatus with retry logic to handle conflicts
-func (r *ReconcileRedisClusterBackup) updateCRStatusWithRetry(backup *redisv1alpha1.RedisClusterBackup) error {
-	// Maximum number of retries
-	maxRetries := 5
-
-	for i := 0; i < maxRetries; i++ {
-		err := r.crController.UpdateCRStatus(backup)
-		if err == nil {
-			// Success
-			return nil
-		}
-
-		// Check if it's a conflict error
-		if errors.IsConflict(err) {
-			// If conflict, get the latest version and try again
-			updatedBackup := &redisv1alpha1.RedisClusterBackup{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{
-				Namespace: backup.Namespace,
-				Name:      backup.Name,
-			}, updatedBackup)
-
-			if err != nil {
-				return err
-			}
-
-			// Copy the status fields we want to update to the latest version
-			updatedBackup.Status.Phase = backup.Status.Phase
-			updatedBackup.Status.Reason = backup.Status.Reason
-			updatedBackup.Status.CompletionTime = backup.Status.CompletionTime
-
-			// Use the updated backup on the next iteration
-			backup = updatedBackup
-
-			// Small delay before retry
-			time.Sleep(time.Duration(100*i) * time.Millisecond)
-			continue
-		}
-
-		// If it's not a conflict error, return immediately
-		return err
-	}
-
-	// If we've exhausted retries, return an error
-	return fmt.Errorf("failed to update backup status after %d retries", maxRetries)
 }
