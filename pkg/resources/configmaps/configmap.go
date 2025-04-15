@@ -24,6 +24,8 @@ func NewConfigMapForCR(cluster *redisv1alpha1.DistributedRedisCluster, labels ma
 	shutdownContent := `#!/bin/sh
 CLUSTER_CONFIG="/data/nodes.conf"
 failover() {
+	echo "Waiting 120s to ensure replication is finished"
+	sleep 120
 	echo "Do CLUSTER FAILOVER"
 	masterID=$(cat ${CLUSTER_CONFIG} | grep "myself" | awk '{print $1}')
 	echo "Master: ${masterID}"
