@@ -48,10 +48,31 @@ save_data() {
 	echo "Performing SAVE to ensure data persistence"
 	password=$(cat /data/redis_password)
 	if [[ -z "${password}" ]]; then
-		redis-cli SAVE
+		redis-cli BGSAVE
 	else
-		redis-cli -a "${password}" SAVE
+		redis-cli -a "${password}" BGSAVE
 	fi
+	echo "Waiting for BGSAVE to complete..."
+	while true; do
+		BGSAVE_INFO=$(redis-cli INFO persistence)
+		BGSAVE_IN_PROGRESS=$(echo "$BGSAVE_INFO" | grep "rdb_bgsave_in_progress" | cut -d: -f2 | tr -d '\r')
+		BGSAVE_STATUS=$(echo "$BGSAVE_INFO" | grep "rdb_last_bgsave_status" | cut -d: -f2 | tr -d '\r')
+		
+		echo "BGSAVE in progress: ${BGSAVE_IN_PROGRESS}, status: ${BGSAVE_STATUS}"
+		
+		if [ "${BGSAVE_IN_PROGRESS}" = "0" ]; then
+			if [ "${BGSAVE_STATUS}" = "ok" ]; then
+				echo "BGSAVE completed successfully"
+				break
+			elif [ "${BGSAVE_STATUS}" = "err" ]; then
+				echo "BGSAVE failed"
+				exit 1
+			fi
+		fi
+		
+		echo "Waiting for BGSAVE to complete..."
+		sleep 5
+	done
 	echo "Redis SAVE completed"
 }
 
