@@ -36,7 +36,7 @@ The operator introduces three main Custom Resource Definitions (CRDs):
 2. **RedisClusterBackup**: Defines a single backup operation for a Redis Cluster.
     - Specifies what to back up
     - Configures where to store the backup
-    - Controls how the backup should be performed (from replicas or masters)
+
 
    [example](deploy/example/pulsepoint/redis-test-cluster-backup.yaml)
 
