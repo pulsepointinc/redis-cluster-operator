@@ -33,6 +33,7 @@ import (
 	"github.com/ucloud/redis-cluster-operator/pkg/controller"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/distributedrediscluster"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackup"
+	redismetrics "github.com/ucloud/redis-cluster-operator/pkg/metrics"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 	"github.com/ucloud/redis-cluster-operator/version"
 )
@@ -143,6 +144,9 @@ func main() {
 	if err != nil {
 		log.Info("Could not create metrics Service", "error", err.Error())
 	}
+
+	// Register custom resource metrics.
+	redismetrics.RegisterMetrics()
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
 	// necessary to configure Prometheus to scrape metrics from this operator.
