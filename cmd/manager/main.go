@@ -4,9 +4,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackupschedule"
 	"os"
 	"runtime"
+
+	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackupschedule"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -33,7 +34,7 @@ import (
 	"github.com/ucloud/redis-cluster-operator/pkg/controller"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/distributedrediscluster"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackup"
-	redismetrics "github.com/ucloud/redis-cluster-operator/pkg/metrics"
+	m "github.com/ucloud/redis-cluster-operator/pkg/metrics"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 	"github.com/ucloud/redis-cluster-operator/version"
 )
@@ -146,7 +147,7 @@ func main() {
 	}
 
 	// Register custom resource metrics.
-	redismetrics.RegisterMetrics()
+	m.RegisterMetrics()
 
 	// CreateServiceMonitors will automatically create the prometheus-operator ServiceMonitor resources
 	// necessary to configure Prometheus to scrape metrics from this operator.
