@@ -2,6 +2,7 @@ package redisclusterbackup
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 	batch "k8s.io/api/batch/v1"
@@ -200,7 +201,7 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			metrics.ClusterBackupInfo.WithLabelValues(request.Namespace, request.Name, "error").Set(1)
+			metrics.ClusterBackupInfo.WithLabelValues(request.Namespace, request.Name, instance.ClusterName, "fail").Set(1)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -240,8 +241,8 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
-	metrics.ClusterBackupInfo.WithLabelValues(request.Namespace, request.Name, "succeed").Set(1)
 
+	metrics.ClusterBackupInfo.WithLabelValues(request.Namespace, request.Name, instance.ClusterName, "successful").Set(1)
 	return reconcile.Result{}, nil
 }
 

@@ -12,8 +12,8 @@ require (
 	github.com/onsi/gomega v1.5.0
 	github.com/operator-framework/operator-sdk v0.13.0
 	github.com/pkg/errors v0.8.1
-	github.com/robfig/cron v1.1.0
 	github.com/prometheus/client_golang v1.1.0
+	github.com/robfig/cron v1.1.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
