@@ -4,8 +4,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func RegisterMetrics() {
-	prometheus.MustRegister(
+func RegisterAllMetrics() *prometheus.Registry {
+	registry := prometheus.NewRegistry()
+
+	registry.MustRegister(
 		ClusterBackupInfo,
 	)
+
+	return registry
 }
