@@ -26,7 +26,15 @@ func RegisterMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(ClusterBackupStatus)
 }
 
-func DeleteMetrics(ns string, clusterName string, backupName string) {
+func DeleteMetrics(ns string, clusterName string) {
+	ClusterBackupStatus.Delete(
+		prometheus.Labels{
+			"namespace":    ns,
+			"cluster_name": clusterName,
+			// "backup_name":  "*",
+			// "status":       "*",
+		},
+	)
 }
 
 func SetBackupStatus(ns string, clusterName string, backupName string, status string) {

@@ -201,7 +201,7 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			redisclusterbackup.DeleteMetrics(request.Namespace, request.Name, instance.Name)
+			redisclusterbackup.DeleteMetrics(request.Namespace, request.Name)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -241,12 +241,12 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
-	r.updateStatusMetric(instance, request)
+	r.updateStatusMetric(instance)
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileRedisClusterBackup) updateStatusMetric(instance *redisv1alpha1.RedisClusterBackup, request reconcile.Request) {
+func (r *ReconcileRedisClusterBackup) updateStatusMetric(instance *redisv1alpha1.RedisClusterBackup) {
 	var backupPhaseToStatusMap = map[redisv1alpha1.BackupPhase]string{
 		redisv1alpha1.BackupPhaseRunning:   redisclusterbackup.BackupStatusRunning,
 		redisv1alpha1.BackupPhaseSucceeded: redisclusterbackup.BackupStatusSucceeded,
@@ -261,7 +261,7 @@ func (r *ReconcileRedisClusterBackup) updateStatusMetric(instance *redisv1alpha1
 
 	redisclusterbackup.SetBackupStatus(
 		instance.Namespace,
-		request.Name,
+		instance.Spec.RedisClusterName,
 		instance.Name,
 		newBackupStatus,
 	)
