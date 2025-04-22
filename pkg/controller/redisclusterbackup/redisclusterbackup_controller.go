@@ -201,6 +201,7 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
+			redisclusterbackup.DeleteMetrics(request.Namespace, request.Name, instance.Name)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -240,24 +241,30 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
+	r.updateMetricStatus(instance, request)
 
-	newStatus := redisclusterbackup.BackupStatusIgnored
-	switch status := instance.Status.Phase; status {
-	case redisv1alpha1.BackupPhaseRunning:
-		newStatus = redisclusterbackup.BackupStatusRunning
-	case redisv1alpha1.BackupPhaseSucceeded:
-		newStatus = redisclusterbackup.BackupStatusSucceeded
-	case redisv1alpha1.BackupPhaseFailed:
-		newStatus = redisclusterbackup.BackupStatusFailed
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileRedisClusterBackup) updateMetricStatus(instance *redisv1alpha1.RedisClusterBackup, request reconcile.Request) {
+	var backupPhaseToStatusMap = map[redisv1alpha1.BackupPhase]string{
+		redisv1alpha1.BackupPhaseRunning:   redisclusterbackup.BackupStatusRunning,
+		redisv1alpha1.BackupPhaseSucceeded: redisclusterbackup.BackupStatusSucceeded,
+		redisv1alpha1.BackupPhaseFailed:    redisclusterbackup.BackupStatusFailed,
+		redisv1alpha1.BackupPhaseIgnored:   redisclusterbackup.BackupStatusIgnored,
 	}
+
+	newBackupStatus, exists := backupPhaseToStatusMap[instance.Status.Phase]
+	if !exists {
+		newBackupStatus = redisclusterbackup.BackupStatusUnknown
+	}
+
 	redisclusterbackup.SetBackupStatus(
 		instance.Namespace,
 		request.Name,
 		instance.Name,
-		newStatus,
+		newBackupStatus,
 	)
-
-	return reconcile.Result{}, nil
 }
 
 func (r *ReconcileRedisClusterBackup) finalizeBackup(reqLogger logr.Logger, b *redisv1alpha1.RedisClusterBackup) error {
