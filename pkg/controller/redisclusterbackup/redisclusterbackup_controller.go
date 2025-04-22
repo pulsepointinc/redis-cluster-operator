@@ -241,12 +241,12 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
-	r.updateMetricStatus(instance, request)
+	r.updateStatusMetric(instance, request)
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileRedisClusterBackup) updateMetricStatus(instance *redisv1alpha1.RedisClusterBackup, request reconcile.Request) {
+func (r *ReconcileRedisClusterBackup) updateStatusMetric(instance *redisv1alpha1.RedisClusterBackup, request reconcile.Request) {
 	var backupPhaseToStatusMap = map[redisv1alpha1.BackupPhase]string{
 		redisv1alpha1.BackupPhaseRunning:   redisclusterbackup.BackupStatusRunning,
 		redisv1alpha1.BackupPhaseSucceeded: redisclusterbackup.BackupStatusSucceeded,
