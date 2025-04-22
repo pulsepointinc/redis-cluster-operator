@@ -30,7 +30,6 @@ func DeleteMetrics(ns string, clusterName string, backupName string) {
 }
 
 func SetBackupStatus(ns string, clusterName string, backupName string, status string) {
-
 	for _, s := range []string{BackupStatusRunning, BackupStatusSucceeded, BackupStatusFailed, BackupStatusIgnored} {
 		ClusterBackupStatus.WithLabelValues(ns, clusterName, backupName, s).Set(0)
 	}

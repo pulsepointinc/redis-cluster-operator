@@ -21,6 +21,7 @@ import (
 
 	redisv1alpha1 "github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1"
 	"github.com/ucloud/redis-cluster-operator/pkg/k8sutil"
+	"github.com/ucloud/redis-cluster-operator/pkg/metrics/redisclusterbackup"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 )
 
@@ -239,6 +240,22 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
+
+	newStatus := redisclusterbackup.BackupStatusIgnored
+	switch status := instance.Status.Phase; status {
+	case redisv1alpha1.BackupPhaseRunning:
+		newStatus = redisclusterbackup.BackupStatusRunning
+	case redisv1alpha1.BackupPhaseSucceeded:
+		newStatus = redisclusterbackup.BackupStatusSucceeded
+	case redisv1alpha1.BackupPhaseFailed:
+		newStatus = redisclusterbackup.BackupStatusFailed
+	}
+	redisclusterbackup.SetBackupStatus(
+		instance.Namespace,
+		request.Name,
+		instance.Name,
+		newStatus,
+	)
 
 	return reconcile.Result{}, nil
 }
