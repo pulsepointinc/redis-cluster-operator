@@ -21,7 +21,6 @@ import (
 
 	redisv1alpha1 "github.com/ucloud/redis-cluster-operator/pkg/apis/redis/v1alpha1"
 	"github.com/ucloud/redis-cluster-operator/pkg/k8sutil"
-	"github.com/ucloud/redis-cluster-operator/pkg/metrics/redisclusterbackup"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 )
 
@@ -201,7 +200,6 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			redisclusterbackup.DeleteMetrics(request.Namespace, request.Name)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -241,30 +239,8 @@ func (r *ReconcileRedisClusterBackup) Reconcile(request reconcile.Request) (reco
 	if err := r.create(reqLogger, instance); err != nil {
 		return reconcile.Result{}, err
 	}
-	r.updateStatusMetric(instance)
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileRedisClusterBackup) updateStatusMetric(instance *redisv1alpha1.RedisClusterBackup) {
-	var backupPhaseToStatusMap = map[redisv1alpha1.BackupPhase]string{
-		redisv1alpha1.BackupPhaseRunning:   redisclusterbackup.BackupStatusRunning,
-		redisv1alpha1.BackupPhaseSucceeded: redisclusterbackup.BackupStatusSucceeded,
-		redisv1alpha1.BackupPhaseFailed:    redisclusterbackup.BackupStatusFailed,
-		redisv1alpha1.BackupPhaseIgnored:   redisclusterbackup.BackupStatusIgnored,
-	}
-
-	newBackupStatus, exists := backupPhaseToStatusMap[instance.Status.Phase]
-	if !exists {
-		newBackupStatus = redisclusterbackup.BackupStatusUnknown
-	}
-
-	redisclusterbackup.SetBackupStatus(
-		instance.Namespace,
-		instance.Spec.RedisClusterName,
-		instance.Name,
-		newBackupStatus,
-	)
 }
 
 func (r *ReconcileRedisClusterBackup) finalizeBackup(reqLogger logr.Logger, b *redisv1alpha1.RedisClusterBackup) error {
