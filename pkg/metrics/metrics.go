@@ -1,12 +1,11 @@
 package metrics
 
 import (
-	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -15,6 +14,8 @@ const (
 	prometheusMetricsServerWriteTimeout   = 8 * time.Second
 	prometheusMetricsServerMaxHeaderBytes = 1 << 20 // 1 MiB
 )
+
+var PrometheusMetrics = New()
 
 // Metrics is designed to be a shared object for updating the metrics exported
 // by the Redis Cluster Operator.
@@ -38,8 +39,8 @@ func New() *Metrics {
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(
-		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		collectors.NewGoCollector(),
+	// collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	// collectors.NewGoCollector(),
 	)
 
 	return &Metrics{
@@ -49,14 +50,14 @@ func New() *Metrics {
 }
 
 // Creates a new HTTP server to export the metrics.
-func (m *Metrics) NewServer(ln net.Listener) *http.Server {
+func (m *Metrics) NewServer(host string, port int32) *http.Server {
 	m.registry.MustRegister(m.redisCLusterBackupStatus)
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}))
 
 	return &http.Server{
-		Addr:           ln.Addr().String(),
+		Addr:           host + ":" + strconv.Itoa(int(port)),
 		ReadTimeout:    prometheusMetricsServerReadTimeout,
 		WriteTimeout:   prometheusMetricsServerWriteTimeout,
 		MaxHeaderBytes: prometheusMetricsServerMaxHeaderBytes,

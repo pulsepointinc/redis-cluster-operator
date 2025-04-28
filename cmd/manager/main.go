@@ -4,11 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"runtime"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackupschedule"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -139,7 +137,9 @@ func main() {
 	}
 
 	go func() {
-		if err = servePrometheusMetrics(); err != nil {
+		server := m.PrometheusMetrics.NewServer(metricsHost, prometheusMetricsPort)
+
+		if err := server.ListenAndServe(); err != nil {
 			log.Info("Could not serve prometheus metrics", "error", err.Error())
 		}
 	}()
@@ -208,23 +208,6 @@ func serveCRMetrics(cfg *rest.Config) error {
 	// Generate and serve custom resource specific metrics.
 	err = kubemetrics.GenerateAndServeCRMetrics(cfg, ns, filteredGVK, metricsHost, operatorMetricsPort)
 	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func servePrometheusMetrics() error {
-	global := m.RegisterAllMetrics()
-
-	http.Handle(
-		"/metrics", promhttp.HandlerFor(
-			global,
-			promhttp.HandlerOpts{},
-		),
-	)
-
-	addr := fmt.Sprintf("%s:%d", metricsHost, prometheusMetricsPort)
-	if err := http.ListenAndServe(addr, nil); err != nil {
 		return err
 	}
 	return nil
