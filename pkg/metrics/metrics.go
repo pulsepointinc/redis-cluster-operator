@@ -38,10 +38,7 @@ func New() *Metrics {
 	)
 
 	registry := prometheus.NewRegistry()
-	registry.MustRegister(
-	// collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-	// collectors.NewGoCollector(),
-	)
+	registry.MustRegister()
 
 	return &Metrics{
 		registry:                 registry,

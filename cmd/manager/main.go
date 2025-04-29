@@ -34,7 +34,7 @@ import (
 	"github.com/ucloud/redis-cluster-operator/pkg/controller"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/distributedrediscluster"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackup"
-	m "github.com/ucloud/redis-cluster-operator/pkg/metrics"
+	appmetrics "github.com/ucloud/redis-cluster-operator/pkg/metrics"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 	"github.com/ucloud/redis-cluster-operator/version"
 )
@@ -137,7 +137,7 @@ func main() {
 	}
 
 	go func() {
-		server := m.PrometheusMetrics.NewServer(metricsHost, prometheusMetricsPort)
+		server := appmetrics.PrometheusMetrics.NewServer(metricsHost, prometheusMetricsPort)
 
 		if err := server.ListenAndServe(); err != nil {
 			log.Info("Could not serve prometheus metrics", "error", err.Error())
