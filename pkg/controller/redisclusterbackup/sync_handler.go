@@ -950,18 +950,18 @@ func (r *ReconcileRedisClusterBackup) createCleanupInitContainers(backup *redisv
 	var retentionPolicy *redisv1alpha1.BackupRetentionPolicy
 
 	// Check if this backup is created by a schedule with retention policy
-	for _, ownerRef := range backup.OwnerReferences {
-		if ownerRef.Kind == "RedisClusterBackupSchedule" {
-			// Find the schedule
-			scheduleTmp := &redisv1alpha1.RedisClusterBackupSchedule{}
-			err := r.client.Get(context.TODO(), types.NamespacedName{
-				Namespace: backup.Namespace,
-				Name:      ownerRef.Name,
-			}, scheduleTmp)
-			if err == nil && scheduleTmp.Spec.RetentionPolicy != nil {
-				retentionPolicy = scheduleTmp.Spec.RetentionPolicy
-				break
-			}
+	if scheduleName, exists := backup.Labels["schedule"]; exists && scheduleName != "" {
+		// Find the schedule using the label value
+		scheduleTmp := &redisv1alpha1.RedisClusterBackupSchedule{}
+		err := r.client.Get(context.TODO(), types.NamespacedName{
+			Namespace: backup.Namespace,
+			Name:      scheduleName,
+		}, scheduleTmp)
+		if err == nil && scheduleTmp.Spec.RetentionPolicy != nil {
+			reqLogger.Info("Found schedule with retention policy", "schedule", scheduleName)
+			retentionPolicy = scheduleTmp.Spec.RetentionPolicy
+		} else if err != nil {
+			reqLogger.Error(err, "Error getting schedule", "schedule", scheduleName)
 		}
 	}
 

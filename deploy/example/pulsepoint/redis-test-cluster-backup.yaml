@@ -4,7 +4,7 @@ kind: PersistentVolumeClaim
 metadata:
   finalizers:
     - kubernetes.io/pvc-protection
-  name: redis-test-backup-03-04-2025
+  name: redis-test-backup-14-04-2025
   namespace: redis
 spec:
   accessModes:
@@ -17,7 +17,7 @@ spec:
 apiVersion: redis.kun/v1alpha1
 kind: RedisClusterBackup
 metadata:
-  name: redis-test-03-04-2025
+  name: redis-test-14-04-2025
   namespace: redis
   annotations:
     redis.kun/scope: cluster-scoped
@@ -27,4 +27,10 @@ spec:
   local:
     mountPath: /back
     persistentVolumeClaim:
-      claimName: redis-test-backup-03-04-2025
+      claimName: redis-test-backup-14-04-2025
+  podSpec:
+    tolerations:
+      - effect: NoSchedule
+        key: redis
+        operator: Equal
+        value: "true"

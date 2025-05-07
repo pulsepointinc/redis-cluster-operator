@@ -3,13 +3,13 @@ kind: DistributedRedisCluster
 metadata:
   annotations:
     redis.kun/scope: cluster-scoped
-  name: redis-test
+  name: redis-test-new
   namespace: redis
 spec:
   image: registry.pulsepoint.com/redis:7.2.3-alpine
   masterSize: 6
   clusterReplicas: 1
-  serviceName: redis-test
+  serviceName: redis-test-new
   config:
     daemonize: "no"
     tcp-backlog: "2048"

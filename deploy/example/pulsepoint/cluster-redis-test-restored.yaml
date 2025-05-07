@@ -118,5 +118,5 @@ spec:
     deleteClaim: false
   init:
     backupSource:
-      name: redis-test-restored-03-04-2025
+      name: redis-test-schedule-15-04-2025-07-10-lad46
       namespace: redis
