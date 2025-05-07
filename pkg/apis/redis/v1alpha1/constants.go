@@ -21,7 +21,7 @@ type RedisRole string
 const (
 	// RedisClusterNodeRoleMaster RedisCluster Master node role
 	RedisClusterNodeRoleMaster RedisRole = "Master"
-	// RedisClusterNodeRoleSlave RedisCluster Master node role
+	// RedisClusterNodeRoleSlave RedisCluster Slave node role
 	RedisClusterNodeRoleSlave RedisRole = "Slave"
 	// RedisClusterNodeRoleNone None node role
 	RedisClusterNodeRoleNone RedisRole = "None"

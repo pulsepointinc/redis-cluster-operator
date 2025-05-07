@@ -176,11 +176,20 @@ func ClusterHeadlessSvcName(name string, i int) string {
 
 func getRedisCommand(cluster *redisv1alpha1.DistributedRedisCluster, password *corev1.EnvVar) []string {
 	cmd := []string{
-		"/conf/fix-ip.sh",
-		"redis-server",
-		"/conf/redis.conf",
-		"--cluster-enabled yes",
-		"--cluster-config-file /data/nodes.conf",
+		"/bin/sh",
+		"-c",
+		`
+		/conf/fix-ip.sh
+		
+		# Check if this node has nodes.conf and might be a master
+		if [ -f "/data/nodes.conf" ] && grep -q "myself,master" /data/nodes.conf 2>/dev/null; then
+			echo "Master node , delaying startup for 20 seconds to allow failover..."
+			sleep 20
+			echo "Delay completed, starting Redis server"
+		fi
+		
+		redis-server /conf/redis.conf --cluster-enabled yes --cluster-config-file /data/nodes.conf
+		`,
 	}
 	if password != nil {
 		cmd = append(cmd, fmt.Sprintf("--requirepass '$(%s)'", redisv1alpha1.PasswordENV),

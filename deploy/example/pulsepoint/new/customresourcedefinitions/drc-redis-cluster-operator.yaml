@@ -1,0 +1,85 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: distributedredisclusters.redis.kun
+spec:
+  conversion:
+    strategy: None
+  group: redis.kun
+  names:
+    kind: DistributedRedisCluster
+    listKind: DistributedRedisClusterList
+    plural: distributedredisclusters
+    shortNames:
+      - drc
+    singular: distributedrediscluster
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: The number of redis master node in the ensemble
+          jsonPath: .spec.masterSize
+          name: MasterSize
+          type: integer
+        - description: The status of redis cluster
+          jsonPath: .status.status
+          name: Status
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+        - description: The current master number of redis cluster
+          jsonPath: .status.numberOfMaster
+          name: CurrentMasters
+          priority: 1
+          type: integer
+        - description: The image of redis cluster
+          jsonPath: .spec.image
+          name: Images
+          priority: 1
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: DistributedRedisCluster is the Schema for the distributedredisclusters
+            API
+          properties:
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: DistributedRedisClusterSpec defines the desired state of
+                DistributedRedisCluster
+              properties:
+                clusterReplicas:
+                  format: int32
+                  maximum: 3
+                  minimum: 1
+                  type: integer
+                masterSize:
+                  format: int32
+                  maximum: 10
+                  minimum: 3
+                  type: integer
+                serviceName:
+                  pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'
+                  type: string
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            status:
+              description: DistributedRedisClusterStatus defines the observed state
+                of DistributedRedisCluster
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: { }

@@ -2,19 +2,18 @@ package v1alpha1
 
 import (
 	"fmt"
-	"path/filepath"
-
 	"github.com/go-logr/logr"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"path/filepath"
 )
 
 const (
 	minMasterSize       = 3
 	minClusterReplicas  = 1
-	defaultRedisImage   = "redis:5.0.4-alpine"
+	defaultRedisImage   = "redis:7.2.3-alpine"
 	defaultMonitorImage = "oliver006/redis_exporter:latest"
 )
 
@@ -117,7 +116,7 @@ func DefaultOwnerReferences(cluster *DistributedRedisCluster) []metav1.OwnerRefe
 func (in *RedisClusterBackup) Validate() error {
 	clusterName := in.Spec.RedisClusterName
 	if clusterName == "" {
-		return fmt.Errorf("bakcup [RedisClusterName] is missing")
+		return fmt.Errorf("backup [RedisClusterName] is missing")
 	}
 	// BucketName can't be empty
 	if in.Spec.S3 == nil && in.Spec.GCS == nil && in.Spec.Azure == nil && in.Spec.Swift == nil && in.Spec.Local == nil {
@@ -126,9 +125,10 @@ func (in *RedisClusterBackup) Validate() error {
 
 	if in.Spec.Azure != nil || in.Spec.Swift != nil {
 		if in.Spec.StorageSecretName == "" {
-			return fmt.Errorf("bakcup [SecretName] is missing")
+			return fmt.Errorf("backup [SecretName] is missing")
 		}
 	}
+
 	return nil
 }
 
@@ -146,6 +146,7 @@ func (in *RedisClusterBackup) RemotePath() (string, error) {
 	} else if spec.Swift != nil {
 		return filepath.Join(spec.Swift.Prefix, DatabaseNamePrefix, in.Namespace, in.Spec.RedisClusterName, timePrefix), nil
 	}
+
 	return "", fmt.Errorf("no storage provider is configured")
 }
 

@@ -9,6 +9,8 @@ spec:
     listKind: RedisClusterBackupList
     plural: redisclusterbackups
     singular: redisclusterbackup
+    shortNames:
+      - drcb
   scope: Namespaced
   versions:
     - name: v1alpha1
@@ -16,8 +18,8 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-        - description: The phase of redis cluster backup
-          jsonPath: .status.phase
+        - jsonPath: .status.phase
+          description: The phase of redis cluster backup
           name: Phase
           type: string
       schema:
@@ -61,6 +63,8 @@ spec:
                     prefix:
                       type: string
                   type: object
+                backupSource:
+                  type: string
                 gcs:
                   properties:
                     bucket:

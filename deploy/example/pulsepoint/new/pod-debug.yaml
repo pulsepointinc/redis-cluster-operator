@@ -1,0 +1,24 @@
+---
+# Debug Pod with busybox
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ceph-fs-debug-pod
+  namespace: kubedb
+spec:
+  containers:
+    - name: busybox
+      image: busybox
+      command:
+        - "/bin/sh"
+        - "-c"
+        - "sleep 3600"  # Keep running for 1 hour
+      volumeMounts:
+        - name: ceph-volume
+          mountPath: /data
+      securityContext:
+        privileged: true  # May be needed to check certain filesystem details
+  volumes:
+    - name: ceph-volume
+      persistentVolumeClaim:
+        claimName: drc-fp-backup

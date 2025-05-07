@@ -7,6 +7,8 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackupschedule"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -32,15 +34,17 @@ import (
 	"github.com/ucloud/redis-cluster-operator/pkg/controller"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/distributedrediscluster"
 	"github.com/ucloud/redis-cluster-operator/pkg/controller/redisclusterbackup"
+	appmetrics "github.com/ucloud/redis-cluster-operator/pkg/metrics"
 	"github.com/ucloud/redis-cluster-operator/pkg/utils"
 	"github.com/ucloud/redis-cluster-operator/version"
 )
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8383
-	operatorMetricsPort int32 = 8686
+	metricsHost                 = "0.0.0.0"
+	prometheusMetricsPort int32 = 8080
+	metricsPort           int32 = 8383
+	operatorMetricsPort   int32 = 8686
 )
 var log = logf.Log.WithName("cmd")
 
@@ -58,6 +62,7 @@ func main() {
 
 	pflag.CommandLine.AddFlagSet(distributedrediscluster.FlagSet())
 	pflag.CommandLine.AddFlagSet(redisclusterbackup.FlagSet())
+	pflag.CommandLine.AddFlagSet(redisclusterbackupschedule.FlagSet())
 
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
@@ -131,10 +136,19 @@ func main() {
 		log.Info("Could not generate and serve custom resource metrics", "error", err.Error())
 	}
 
+	go func() {
+		server := appmetrics.PrometheusMetrics.NewServer(metricsHost, prometheusMetricsPort)
+
+		if err := server.ListenAndServe(); err != nil {
+			log.Info("Could not serve prometheus metrics", "error", err.Error())
+		}
+	}()
+
 	// Add to the below struct any other metrics ports you want to expose.
 	servicePorts := []v1.ServicePort{
 		{Port: metricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort}},
 		{Port: operatorMetricsPort, Name: metrics.CRPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: operatorMetricsPort}},
+		{Port: prometheusMetricsPort, Name: "PrometheusMetrics", Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: prometheusMetricsPort}},
 	}
 	// Create Service object to expose the metrics port(s).
 	service, err := metrics.CreateMetricsService(ctx, cfg, servicePorts)

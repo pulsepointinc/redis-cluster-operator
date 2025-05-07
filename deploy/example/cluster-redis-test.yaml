@@ -1,0 +1,18 @@
+apiVersion: redis.kun/v1alpha1
+kind: DistributedRedisCluster
+metadata:
+  annotations:
+    redis.kun/scope: cluster-scoped
+  name: redis-test
+  namespace: redis
+spec:
+  masterSize: 3
+  clusterReplicas: 1
+  image: registry.pulsepoint.com/redis:7.2.3-alpine
+  resources:
+    limits:
+      cpu: "1"
+      memory: 4Gi
+    requests:
+      cpu: 200m
+      memory: 1Gi

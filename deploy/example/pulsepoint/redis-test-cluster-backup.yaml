@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  finalizers:
+    - kubernetes.io/pvc-protection
+  name: redis-test-backup-14-04-2025
+  namespace: redis
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 60Gi
+  storageClassName: rook-cephfs
+---
+apiVersion: redis.kun/v1alpha1
+kind: RedisClusterBackup
+metadata:
+  name: redis-test-14-04-2025
+  namespace: redis
+  annotations:
+    redis.kun/scope: cluster-scoped
+spec:
+  image: registry.pulsepoint.com/redis-tools:1.0.5-operator
+  redisClusterName: redis-test
+  local:
+    mountPath: /back
+    persistentVolumeClaim:
+      claimName: redis-test-backup-14-04-2025
+  podSpec:
+    tolerations:
+      - effect: NoSchedule
+        key: redis
+        operator: Equal
+        value: "true"

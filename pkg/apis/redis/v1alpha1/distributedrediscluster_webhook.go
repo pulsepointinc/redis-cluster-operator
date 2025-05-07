@@ -93,6 +93,11 @@ func compareObj(new, old *DistributedRedisCluster, log logr.Logger) bool {
 func (in *DistributedRedisCluster) ValidateDelete() error {
 	log := log.WithValues("namespace", in.Namespace, "name", in.Name)
 	log.Info("ValidateDelete")
+	// Check if the required deletion annotation exists and has the correct value
+	if value, exists := in.Annotations["delete"]; !exists || !strings.EqualFold(value, "true") {
+		return fmt.Errorf("deletion not allowed: DistributedRedisCluster %s/%s must have annotation \"delete\": \"true\" to be deleted",
+			in.Namespace, in.Name)
+	}
 	return nil
 }
 

@@ -24,6 +24,8 @@ func NewConfigMapForCR(cluster *redisv1alpha1.DistributedRedisCluster, labels ma
 	shutdownContent := `#!/bin/sh
 CLUSTER_CONFIG="/data/nodes.conf"
 failover() {
+	echo "Waiting 120s to ensure replication is finished"
+	sleep 120
 	echo "Do CLUSTER FAILOVER"
 	masterID=$(cat ${CLUSTER_CONFIG} | grep "myself" | awk '{print $1}')
 	echo "Master: ${masterID}"
@@ -37,10 +39,49 @@ failover() {
 	fi
 	echo "Wait for MASTER <-> SLAVE syncFinished"
 	sleep 20
+	
+	# Add backup after failover completes for master nodes
+	save_data
 }
+
+save_data() {
+	echo "Performing SAVE to ensure data persistence"
+	password=$(cat /data/redis_password)
+	if [[ -z "${password}" ]]; then
+		redis-cli BGSAVE
+	else
+		redis-cli -a "${password}" BGSAVE
+	fi
+	echo "Waiting for BGSAVE to complete..."
+	while true; do
+		BGSAVE_INFO=$(redis-cli INFO persistence)
+		BGSAVE_IN_PROGRESS=$(echo "$BGSAVE_INFO" | grep "rdb_bgsave_in_progress" | cut -d: -f2 | tr -d '\r')
+		BGSAVE_STATUS=$(echo "$BGSAVE_INFO" | grep "rdb_last_bgsave_status" | cut -d: -f2 | tr -d '\r')
+		
+		echo "BGSAVE in progress: ${BGSAVE_IN_PROGRESS}, status: ${BGSAVE_STATUS}"
+		
+		if [ "${BGSAVE_IN_PROGRESS}" = "0" ]; then
+			if [ "${BGSAVE_STATUS}" = "ok" ]; then
+				echo "BGSAVE completed successfully"
+				break
+			elif [ "${BGSAVE_STATUS}" = "err" ]; then
+				echo "BGSAVE failed"
+				exit 1
+			fi
+		fi
+		
+		echo "Waiting for BGSAVE to complete..."
+		sleep 5
+	done
+	echo "Redis SAVE completed"
+}
+
 if [ -f ${CLUSTER_CONFIG} ]; then
 	cat ${CLUSTER_CONFIG} | grep "myself" | grep "master" && \
 	failover
+else
+	# For non-master nodes or when config doesn't exist, just save
+	save_data
 fi`
 
 	// Fixed Nodes.conf does not update IP address of a node when IP changes after restart,
